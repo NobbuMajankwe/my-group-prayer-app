@@ -12,7 +12,6 @@ interface HeaderProps {
 export default function Header({ entries, onEditLeaders }: HeaderProps) {
   return (
     <Box component="header" sx={{ mb: 5 }}>
-      {/* Title row */}
       <Box
         sx={{
           display: 'flex',
@@ -22,26 +21,56 @@ export default function Header({ entries, onEditLeaders }: HeaderProps) {
           flexWrap: 'wrap',
         }}
       >
-        <Box>
-          <Typography
-            variant="h4"
-            component="h1"
+        {/* Logo + title */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            component="img"
+            src="/favicon_io/android-chrome-192x192.png"
+            alt="Review & Action Tracker logo"
             sx={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              mb: 0.5,
+              width: { xs: 40, sm: 48 },
+              height: { xs: 40, sm: 48 },
+              borderRadius: 2.5,
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(124,58,237,0.18)',
             }}
-          >
-            Review &amp; Action Tracker
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Capture reviews and the actions planned in response.
-          </Typography>
+          />
+          <Box>
+            <Typography
+              variant="h4"
+              component="h4"
+              sx={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                mb: 0.25,
+                lineHeight: 1.2,
+              }}
+            >
+              PrayTogether
+            </Typography>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                mb: 0.25,
+                lineHeight: 1.2,
+              }}
+            >
+               Prayer, Review &amp; Action Tracker
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Capture reviews and the actions planned in response.
+            </Typography>
+          </Box>
         </Box>
 
-        {/* Buttons */}
+        {/* Action buttons */}
         <Box sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
           <Tooltip title="Add or remove leaders">
             <Button

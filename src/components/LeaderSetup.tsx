@@ -66,9 +66,34 @@ export default function LeaderSetup({ onComplete }: LeaderSetupProps) {
           borderColor: alpha('#7c3aed', 0.12),
         }}
       >
-        {/* Icon + heading */}
+        {/* Logo + heading */}
         <Box sx={{ mb: 3 }}>
-          <Typography sx={{ fontSize: '2.5rem', lineHeight: 1, mb: 1 }}>👋</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <Box
+              component="img"
+              src="/favicon_io/android-chrome-192x192.png"
+              alt="Review & Action Tracker logo"
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: 2.5,
+                boxShadow: '0 2px 8px rgba(124,58,237,0.18)',
+              }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                lineHeight: 1.2,
+              }}
+            >
+              Review &amp; Action Tracker
+            </Typography>
+          </Box>
           <Typography variant="h5" sx={{ mb: 0.5, color: 'primary.main' }}>
             Set up your leaders
           </Typography>
