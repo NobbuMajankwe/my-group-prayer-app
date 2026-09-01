@@ -44,7 +44,7 @@ export default function DeleteConfirmationDialog({ entry, open, onConfirm, onCan
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           This will permanently delete the entry for{' '}
           <Typography component="span" variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            {entry?.name}
+            {entry?.revieweeName ?? (entry as any)?.name}
           </Typography>
           . This cannot be undone.
         </Typography>

@@ -81,14 +81,15 @@ export const generateReviewsPdf = (entries: ReviewEntry[]): void => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(100, 60, 180);
-    doc.text('Leader (Me)', PAGE_MARGIN, y);
+    doc.text('Reviewer', PAGE_MARGIN, y);
     y += LINE_HEIGHT - 1;
 
-    // --- Leader Name value ---
+    // --- Leader Name value with role ---
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    const leaderLines = splitText(doc, entry.leaderName, CONTENT_WIDTH);
+    const roleLabel = entry.leaderRole === 'leader' ? 'Leader' : 'Core / Intern';
+    const leaderLines = splitText(doc, `${entry.leaderName} (${roleLabel})`, CONTENT_WIDTH);
     y = writeLines(doc, leaderLines, PAGE_MARGIN, y, pageHeight);
     y += SECTION_GAP;
 
@@ -105,13 +106,14 @@ export const generateReviewsPdf = (entries: ReviewEntry[]): void => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    doc.text('Name', PAGE_MARGIN, y);
+    const revieweeRoleLabel = entry.revieweeRole === 'core' ? 'Core / Intern' : 'Member';
+    doc.text(`Name  ·  ${revieweeRoleLabel}`, PAGE_MARGIN, y);
     y += LINE_HEIGHT;
 
     // --- Name value ---
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    const nameLines = splitText(doc, entry.name, CONTENT_WIDTH);
+    const nameLines = splitText(doc, entry.revieweeName ?? (entry as any).name ?? '', CONTENT_WIDTH);
     y = writeLines(doc, nameLines, PAGE_MARGIN, y, pageHeight);
     y += SECTION_GAP;
 

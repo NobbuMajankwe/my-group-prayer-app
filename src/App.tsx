@@ -11,7 +11,7 @@ import {
   createTheme,
   alpha,
 } from '@mui/material';
-import type { ReviewEntry } from './types/ReviewEntry';
+import type { ReviewEntry, LeaderPerson } from './types/ReviewEntry';
 import { loadEntries, saveEntries, loadLeaders, saveLeaders } from './utils/storage';
 import Header from './components/Header';
 import EntryForm from './components/EntryForm';
@@ -57,46 +57,27 @@ const theme = createTheme({
   components: {
     MuiCard: {
       defaultProps: { elevation: 2 },
-      styleOverrides: {
-        root: {
-          border: `1px solid ${alpha(PURPLE, 0.1)}`,
-          borderRadius: 16,
-        },
-      },
+      styleOverrides: { root: { border: `1px solid ${alpha(PURPLE, 0.1)}`, borderRadius: 16 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: {
-          borderRadius: 10,
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.875rem',
-          padding: '8px 18px',
-        },
+        root: { borderRadius: 10, textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', padding: '8px 18px' },
       },
       variants: [
         {
           props: { variant: 'contained', color: 'primary' },
           style: {
             background: `linear-gradient(135deg, ${PURPLE} 0%, #a855f7 100%)`,
-            '&:hover': {
-              background: `linear-gradient(135deg, #6d28d9 0%, ${PURPLE} 100%)`,
-            },
-            '&.Mui-disabled': {
-              background: alpha(PURPLE, 0.2),
-              color: alpha(PURPLE, 0.5),
-            },
+            '&:hover': { background: `linear-gradient(135deg, #6d28d9 0%, ${PURPLE} 100%)` },
+            '&.Mui-disabled': { background: alpha(PURPLE, 0.2), color: alpha(PURPLE, 0.5) },
           },
         },
         {
           props: { variant: 'outlined', color: 'primary' },
           style: {
             borderColor: alpha(PURPLE, 0.4),
-            '&:hover': {
-              borderColor: PURPLE,
-              background: alpha(PURPLE, 0.04),
-            },
+            '&:hover': { borderColor: PURPLE, background: alpha(PURPLE, 0.04) },
           },
         },
       ],
@@ -105,41 +86,25 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 10,
-            background: '#ffffff',
-            '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: alpha(PURPLE, 0.5),
-            },
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: PURPLE,
-            },
+            borderRadius: 10, background: '#ffffff',
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(PURPLE, 0.5) },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: PURPLE },
           },
         },
       },
     },
-    MuiSelect: {
+    MuiSelect: { styleOverrides: { root: { borderRadius: 10, background: '#ffffff' } } },
+    MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
-          background: '#ffffff',
+          '&.Mui-selected': { background: alpha(PURPLE, 0.1), color: PURPLE, borderColor: alpha(PURPLE, 0.3) },
+          '&.Mui-selected:hover': { background: alpha(PURPLE, 0.15) },
         },
       },
     },
-    MuiChip: {
-      styleOverrides: {
-        root: { borderRadius: 8 },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: { borderRadius: 20 },
-      },
-    },
-    MuiDialogTitle: {
-      styleOverrides: {
-        root: { paddingBottom: 8 },
-      },
-    },
+    MuiChip:        { styleOverrides: { root: { borderRadius: 8 } } },
+    MuiDialog:      { styleOverrides: { paper: { borderRadius: 20 } } },
+    MuiDialogTitle: { styleOverrides: { root: { paddingBottom: 8 } } },
   },
 });
 
@@ -153,20 +118,16 @@ function loadViewMode(): ViewMode {
   } catch { return 'card'; }
 }
 
-type SnackbarState = {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
-};
+type SnackbarState = { open: boolean; message: string; severity: 'success' | 'error' };
 
 export default function App() {
-  const [leaders, setLeaders] = useState<string[]>(loadLeaders);
+  const [leaders, setLeaders]           = useState<LeaderPerson[]>(loadLeaders);
   const [editLeadersOpen, setEditLeadersOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode);
-  const [entries, setEntries] = useState<ReviewEntry[]>(loadEntries);
+  const [viewMode, setViewMode]         = useState<ViewMode>(loadViewMode);
+  const [entries, setEntries]           = useState<ReviewEntry[]>(loadEntries);
   const [editingEntry, setEditingEntry] = useState<ReviewEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewEntry | null>(null);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
+  const [snackbar, setSnackbar]         = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
 
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
     setSnackbar({ open: true, message, severity });
@@ -178,12 +139,12 @@ export default function App() {
     try { localStorage.setItem(VIEW_KEY, mode); } catch { /* ignore */ }
   };
 
-  const handleLeaderSetupComplete = (newLeaders: string[]) => {
+  const handleLeaderSetupComplete = (newLeaders: LeaderPerson[]) => {
     saveLeaders(newLeaders);
     setLeaders(newLeaders);
   };
 
-  const handleEditLeadersSave = (updated: string[]) => {
+  const handleEditLeadersSave = (updated: LeaderPerson[]) => {
     saveLeaders(updated);
     setLeaders(updated);
     setEditLeadersOpen(false);
@@ -191,13 +152,16 @@ export default function App() {
   };
 
   const handleAddEntry = (values: EntryFormValues) => {
+    const reviewer = leaders.find((l) => l.name === values.leaderName);
     const entry: ReviewEntry = {
       id: uuidv4(),
-      leaderName: values.leaderName,
-      name: values.name.trim(),
-      review: values.review.trim(),
+      leaderName:   values.leaderName,
+      leaderRole:   reviewer?.role ?? 'core',
+      revieweeName: values.revieweeName.trim(),
+      revieweeRole: values.revieweeRole,
+      review:       values.review.trim(),
       plannedAction: values.plannedAction.trim(),
-      createdAt: new Date().toISOString(),
+      createdAt:    new Date().toISOString(),
     };
     const updated = [entry, ...entries];
     setEntries(updated);
@@ -207,9 +171,18 @@ export default function App() {
 
   const handleEditEntry = (values: EntryFormValues) => {
     if (!editingEntry) return;
+    const reviewer = leaders.find((l) => l.name === values.leaderName);
     const updated = entries.map((e) =>
       e.id === editingEntry.id
-        ? { ...e, leaderName: values.leaderName, name: values.name.trim(), review: values.review.trim(), plannedAction: values.plannedAction.trim() }
+        ? {
+            ...e,
+            leaderName:   values.leaderName,
+            leaderRole:   reviewer?.role ?? e.leaderRole,
+            revieweeName: values.revieweeName.trim(),
+            revieweeRole: values.revieweeRole,
+            review:       values.review.trim(),
+            plannedAction: values.plannedAction.trim(),
+          }
         : e
     );
     setEntries(updated);
@@ -235,6 +208,7 @@ export default function App() {
     showSnackbar('Entry deleted.');
   };
 
+  // ── Setup gate ─────────────────────────────────────────────────────────
   if (leaders.length === 0) {
     return (
       <ThemeProvider theme={theme}>
@@ -259,7 +233,6 @@ export default function App() {
       >
         <Container maxWidth={viewMode === 'grid' ? 'lg' : 'sm'} sx={{ transition: 'max-width 0.3s ease' }}>
           <Header entries={entries} onEditLeaders={() => setEditLeadersOpen(true)} />
-          {/* Form stays narrow even in grid mode */}
           <Box sx={{ maxWidth: viewMode === 'grid' ? 600 : 'none', mx: viewMode === 'grid' ? 'auto' : 0 }}>
             <EntryForm
               leaders={leaders}
@@ -298,12 +271,8 @@ export default function App() {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%', borderRadius: 3, boxShadow: 4 }}
-        >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled"
+          sx={{ width: '100%', borderRadius: 3, boxShadow: 4 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

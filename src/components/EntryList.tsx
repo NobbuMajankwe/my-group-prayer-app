@@ -148,8 +148,8 @@ export default function EntryList({ entries, viewMode, onViewChange, onEdit, onD
             }}
           >
             <Typography variant="caption" sx={{ minWidth: 24, fontWeight: 700, color: 'text.disabled' }}>#</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', flex: '0 0 160px' }}>NAME</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>LEADER</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', flex: '0 0 200px' }}>NAME</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>REVIEWER</Typography>
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', flex: 1, display: { xs: 'none', md: 'block' } }}>REVIEW</Typography>
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>DATE</Typography>
           </Box>

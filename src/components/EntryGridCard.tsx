@@ -3,7 +3,7 @@ import {
   Box,
   Card,
   CardContent,
-  Collapse,
+  Chip,
   Divider,
   IconButton,
   Tooltip,
@@ -14,10 +14,22 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import type { ReviewEntry } from '../types/ReviewEntry';
+import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import type { ReviewEntry, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
 
 const PURPLE = '#7c3aed';
 const PINK   = '#db2777';
+
+const LEADER_COLOURS: Record<LeaderRole, { bg: string; border: string; color: string }> = {
+  leader: { bg: 'rgba(234,179,8,0.10)',  border: 'rgba(234,179,8,0.30)',  color: '#92400e' },
+  core:   { bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.30)', color: '#0f766e' },
+};
+
+const REVIEWEE_COLOURS: Record<RevieweeRole, { bg: string; border: string; color: string }> = {
+  member: { bg: 'rgba(124,58,237,0.07)', border: 'rgba(124,58,237,0.2)', color: '#5b21b6' },
+  core:   { bg: 'rgba(20,184,166,0.08)', border: 'rgba(20,184,166,0.25)', color: '#0f766e' },
+};
 
 const PREVIEW_CHARS = 120;
 
@@ -79,32 +91,21 @@ export default function EntryGridCard({ entry, onEdit, onDelete }: EntryGridCard
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.5 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 700,
-                color: 'text.primary',
-                lineHeight: 1.3,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {entry.name}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'wrap' }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  px: 0.875,
-                  py: 0.15,
-                  borderRadius: 1.5,
-                  bgcolor: alpha(PURPLE, 0.08),
-                  color: 'primary.dark',
-                  fontWeight: 700,
-                  lineHeight: 1.6,
-                }}
-              >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 0.4 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {entry.revieweeName ?? (entry as any).name}
+              </Typography>
+              <Chip
+                label={entry.revieweeRole === 'core' ? 'Core' : 'Member'}
+                size="small"
+                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].bg, color: REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].color, border: `1px solid ${REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].border}` }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap' }}>
+              {entry.leaderRole === 'leader'
+                ? <StarOutlinedIcon sx={{ fontSize: 11, color: '#eab308' }} />
+                : <GroupsOutlinedIcon sx={{ fontSize: 11, color: '#14b8a6' }} />}
+              <Typography variant="caption" sx={{ px: 0.75, py: 0.1, borderRadius: 1.5, bgcolor: LEADER_COLOURS[entry.leaderRole ?? 'core'].bg, color: LEADER_COLOURS[entry.leaderRole ?? 'core'].color, fontWeight: 700, border: `1px solid ${LEADER_COLOURS[entry.leaderRole ?? 'core'].border}` }}>
                 {entry.leaderName}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>
@@ -172,9 +173,6 @@ export default function EntryGridCard({ entry, onEdit, onDelete }: EntryGridCard
           <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.7, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
             {expanded ? entry.plannedAction : clamp(entry.plannedAction, PREVIEW_CHARS)}
           </Typography>
-
-          {/* Extra content when expanded */}
-          <Collapse in={false}>{/* placeholder — expansion is inline above */}</Collapse>
         </Box>
 
         {/* Expand / collapse toggle */}

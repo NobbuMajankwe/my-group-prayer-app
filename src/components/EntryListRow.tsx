@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Box,
+  Chip,
   Collapse,
   Divider,
   IconButton,
@@ -12,7 +13,19 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import type { ReviewEntry } from '../types/ReviewEntry';
+import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import type { ReviewEntry, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
+
+const LEADER_COLOURS: Record<LeaderRole, { bg: string; border: string; color: string }> = {
+  leader: { bg: 'rgba(234,179,8,0.10)',  border: 'rgba(234,179,8,0.30)',  color: '#92400e' },
+  core:   { bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.30)', color: '#0f766e' },
+};
+
+const REVIEWEE_COLOURS: Record<RevieweeRole, { bg: string; border: string; color: string }> = {
+  member: { bg: 'rgba(124,58,237,0.07)', border: 'rgba(124,58,237,0.2)', color: '#5b21b6' },
+  core:   { bg: 'rgba(20,184,166,0.08)', border: 'rgba(20,184,166,0.25)', color: '#0f766e' },
+};
 
 interface EntryListRowProps {
   entry: ReviewEntry;
@@ -60,30 +73,30 @@ export default function EntryListRow({ entry, index, isLast, onEdit, onDelete }:
           {index + 1}
         </Typography>
 
-        {/* Name */}
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 600, color: 'text.primary', minWidth: 0, flex: '0 0 160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        >
-          {entry.name}
-        </Typography>
+        {/* Name + reviewee role */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: '0 0 auto', maxWidth: { xs: 160, sm: 200 }, minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {entry.revieweeName ?? (entry as any).name}
+          </Typography>
+          <Chip
+            label={entry.revieweeRole === 'core' ? 'Core' : 'Member'}
+            size="small"
+            sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, flexShrink: 0, bgcolor: REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].bg, color: REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].color, border: `1px solid ${REVIEWEE_COLOURS[entry.revieweeRole ?? 'member'].border}`, display: { xs: 'none', sm: 'flex' } }}
+          />
+        </Box>
 
-        {/* Leader badge */}
-        <Typography
-          variant="caption"
-          sx={{
-            px: 1,
-            py: 0.2,
-            borderRadius: 1.5,
-            bgcolor: alpha('#7c3aed', 0.08),
-            color: 'primary.dark',
-            fontWeight: 700,
-            flexShrink: 0,
-            display: { xs: 'none', sm: 'block' },
-          }}
-        >
-          {entry.leaderName}
-        </Typography>
+        {/* Leader badge with role icon */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, display2: { xs: 'none', sm: 'flex' } }}>
+          {entry.leaderRole === 'leader'
+            ? <StarOutlinedIcon sx={{ fontSize: 12, color: '#eab308', display: { xs: 'none', sm: 'block' } }} />
+            : <GroupsOutlinedIcon sx={{ fontSize: 12, color: '#14b8a6', display: { xs: 'none', sm: 'block' } }} />}
+          <Typography
+            variant="caption"
+            sx={{ px: 0.875, py: 0.15, borderRadius: 1.5, bgcolor: LEADER_COLOURS[entry.leaderRole ?? 'core'].bg, color: LEADER_COLOURS[entry.leaderRole ?? 'core'].color, fontWeight: 700, border: `1px solid ${LEADER_COLOURS[entry.leaderRole ?? 'core'].border}`, display: { xs: 'none', sm: 'block' } }}
+          >
+            {entry.leaderName}
+          </Typography>
+        </Box>
 
         {/* Review preview */}
         <Typography
