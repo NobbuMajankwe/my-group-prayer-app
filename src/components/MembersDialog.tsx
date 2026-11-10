@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Avatar, Box, Button, Chip, Dialog, DialogActions,
+  Alert, Avatar, Box, Button, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, Divider, FormControl,
   FormHelperText, IconButton, InputLabel, MenuItem,
   Select, Tab, Tabs, TextField, Tooltip, Typography, alpha,
@@ -72,6 +72,7 @@ export default function MembersDialog({
       setErrors({});
       setShowForm(false);
       setInputTab(0);
+      setCsvResult(null);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -85,29 +86,62 @@ export default function MembersDialog({
 
   // ── CSV import ─────────────────────────────────────────────────────────
   // Format: Name, Assigned Leader, Assigned Core (optional)
+  const [csvResult, setCsvResult] = useState<{ added: number; skipped: { row: string; reason: string }[] } | null>(null);
+
   const handleCsvImport = (rows: string[][]) => {
-    const toAdd: Member[] = [];
+    setCsvResult(null);
+    const toAdd:   Member[] = [];
+    const skipped: { row: string; reason: string }[] = [];
+
     for (const row of rows) {
       const [name = '', leaderName = '', coreName = ''] = row;
       const trimmedName   = name.trim();
       const trimmedLeader = leaderName.trim();
-      if (!trimmedName || !trimmedLeader) continue;
+      const rowLabel      = row.join(', ');
+
+      if (!trimmedName) {
+        skipped.push({ row: rowLabel, reason: 'Missing member name' });
+        continue;
+      }
+      if (!trimmedLeader) {
+        skipped.push({ row: rowLabel, reason: `Missing leader name for "${trimmedName}"` });
+        continue;
+      }
       // Skip duplicates
-      if (list.some((m) => m.name.toLowerCase() === trimmedName.toLowerCase())) continue;
-      // Validate leader exists (warn-and-skip if not)
-      const leaderExists = leaders.some(
-        (l) => l.role === 'leader' && l.name.toLowerCase() === trimmedLeader.toLowerCase()
-      );
-      if (!leaderExists) continue;
-      // Find exact leader name (case-insensitive match → use stored name)
+      if (list.some((m) => m.name.toLowerCase() === trimmedName.toLowerCase())) {
+        skipped.push({ row: rowLabel, reason: `"${trimmedName}" already exists` });
+        continue;
+      }
+      // Match leader by name OR displayName, case-insensitive, ignore extra spaces
       const matchedLeader = leaders.find(
-        (l) => l.role === 'leader' && l.name.toLowerCase() === trimmedLeader.toLowerCase()
-      )!;
+        (l) =>
+          l.role === 'leader' &&
+          (
+            l.name.toLowerCase().trim()        === trimmedLeader.toLowerCase() ||
+            (l.displayName ?? '').toLowerCase().trim() === trimmedLeader.toLowerCase()
+          )
+      );
+      if (!matchedLeader) {
+        skipped.push({ row: rowLabel, reason: `Leader "${trimmedLeader}" not found — check spelling matches your team exactly` });
+        continue;
+      }
+
+      // Core is optional — match by name or displayName
       const matchedCore = coreName.trim()
         ? leaders.find(
-            (l) => l.role === 'core' && l.name.toLowerCase() === coreName.trim().toLowerCase()
+            (l) =>
+              l.role === 'core' &&
+              (
+                l.name.toLowerCase().trim()        === coreName.trim().toLowerCase() ||
+                (l.displayName ?? '').toLowerCase().trim() === coreName.trim().toLowerCase()
+              )
           )
         : undefined;
+
+      if (coreName.trim() && !matchedCore) {
+        // Core not found — still add the member but without core assignment
+        skipped.push({ row: rowLabel, reason: `Core "${coreName.trim()}" not found — member added without core assignment` });
+      }
 
       toAdd.push({
         id:             crypto.randomUUID(),
@@ -116,9 +150,11 @@ export default function MembersDialog({
         assignedCore:   matchedCore?.name,
       });
     }
+
     if (toAdd.length > 0) {
       setList((p) => [...p, ...toAdd]);
     }
+    setCsvResult({ added: toAdd.length, skipped });
   };
 
   // ── Validate ──────────────────────────────────────────────────────────
@@ -247,10 +283,45 @@ export default function MembersDialog({
         {inputTab === 1 && (
           <Box sx={{ mb: 2.5 }}>
             <CsvImportPanel
-              formatHint={`Each line: Member Name, Leader Name, Core Name (optional)\nLeader and Core names must match existing team members exactly.`}
-              example={`Fatima, Shereen\nZainab, Shereen, Aisha\nMaryam, Fatimah`}
+              formatHint={`Each line: Member Name, Leader Name, Core Name (optional)\nLeader and Core names must match your team names exactly (case-insensitive).`}
+              example={`Fatima, Shereen Hadebe\nZainab, Shereen Hadebe, Chanel\nMaryam, Nqobile Hadebe`}
               onImport={handleCsvImport}
             />
+
+            {/* Import result feedback */}
+            {csvResult && (
+              <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {csvResult.added > 0 && (
+                  <Alert severity="success" sx={{ borderRadius: 2, py: 0.5 }}>
+                    {csvResult.added} member{csvResult.added !== 1 ? 's' : ''} added — click <strong>Save members</strong> to confirm.
+                  </Alert>
+                )}
+                {csvResult.skipped.length > 0 && (
+                  <Alert severity="warning" sx={{ borderRadius: 2, py: 0.5 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                      {csvResult.skipped.length} row{csvResult.skipped.length !== 1 ? 's' : ''} skipped:
+                    </Typography>
+                    <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                      {csvResult.skipped.map((s, i) => (
+                        <Box component="li" key={i}>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                            {s.reason}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'text.secondary' }}>
+                      Available leaders: {leaders.filter((l) => l.role === 'leader').map((l) => l.name).join(', ') || 'none'}
+                    </Typography>
+                  </Alert>
+                )}
+                {csvResult.added === 0 && csvResult.skipped.length === 0 && (
+                  <Alert severity="info" sx={{ borderRadius: 2, py: 0.5 }}>
+                    No new members to import.
+                  </Alert>
+                )}
+              </Box>
+            )}
           </Box>
         )}
 

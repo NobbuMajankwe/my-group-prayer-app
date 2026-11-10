@@ -1,0 +1,12 @@
+﻿# Leaders & Core/Interns Sample CSV,,
+# Format: Name, Role (leader or core), Password
+# -------------------------------------------------,,
+"# - Role: use ""leader"" or ""core""",,
+# - Password: minimum 4 characters,,
+# - Lines starting with # are ignored,,
+# -------------------------------------------------,,
+,,
+Shereen Hadebe,     leader,0000
+Nqobile Hadebe,     leader,0000
+Chanel,       core,0000
+Blessing,       core,0000

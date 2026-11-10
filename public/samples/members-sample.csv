@@ -1,0 +1,15 @@
+# Group Members Sample CSV
+# Format: Member Name, Assigned Leader, Assigned Core (optional)
+# -------------------------------------------------
+# Leader and Core names must match your team EXACTLY (case-insensitive)
+# Lines starting with # are ignored
+# -------------------------------------------------
+
+Nadia Hassan,Shereen Hadebe,Chanel
+Layla Ibrahim,Shereen Hadebe,Chanel
+Hana Yusuf,Shereen Hadebe,Blessing
+Rania Khalid,Shereen Hadebe,Blessing
+Sara Osman,Shereen Hadebe
+Mariam Ali,Nqobile Hadebe,Chanel
+Khadija Noor,Nqobile Hadebe,Blessing
+Leila Amin,Nqobile Hadebe

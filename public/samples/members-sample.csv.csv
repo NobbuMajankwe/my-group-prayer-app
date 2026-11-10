@@ -1,0 +1,41 @@
+﻿# Group Members Sample CSV,,
+# Format: Member Name, Assigned Leader, Assigned Core (optional)
+# -------------------------------------------------,,
+# - Assigned Leader: must exactly match a leader name in your team,,
+# - Assigned Core: optional — must exactly match a core/intern name,,
+# - Lines starting with # are ignored,,
+# -------------------------------------------------,,
+,,
+# --- Shereen's group ---,,
+Monique,Shereen Hadebe, Shereen Hadebe
+Boitumelo,Shereen Hadebe, Shereen Hadebe
+Busisiwe,Shereen Hadebe,Chanel
+Caylee,Shereen Hadebe, Shereen Hadebe
+Chanel,Shereen Hadebe, Shereen Hadebe
+Claimi,Shereen Hadebe, Shereen Hadebe
+Deznay,Shereen Hadebe, Chanel
+Kamogelo,Shereen Hadebe,Chanel
+Khanyisile,Shereen Hadebe,Chanel
+Tanatswa,Shereen Hadebe,Chanel
+Precious,Shereen Hadebe, Shereen Hadebe
+Shyleen,Shereen Hadebe, Shereen Hadebe
+Sinethemba,Shereen Hadebe, Shereen Hadebe
+Susan,Shereen Hadebe, Shereen Hadebe
+Shannon,Shereen Hadebe, Shereen Hadebe
+,,
+# --- Nqobile's group ---,,
+Blessing M,Nqobile Hadebe, Nqobile Hadebe
+Blessing Nkosi,Nqobile Hadebe, Blessing
+Emmanuel,Nqobile Hadebe, Blessing
+Innocent,Nqobile Hadebe, Nqobile Hadebe
+Jason,Nqobile Hadebe, Nqobile Hadebe
+Khaya,Nqobile Hadebe, Blessing
+Lusanda,Nqobile Hadebe, Nqobile Hadebe
+Manuel,Nqobile Hadebe, Nqobile Hadebe
+Romeo,Nqobile Hadebe, Nqobile Hadebe
+Takudzwa,Nqobile Hadebe, Nqobile Hadebe
+Tyrique,Nqobile Hadebe, Nqobile Hadebe
+Joshua,Nqobile Hadebe, Nqobile Hadebe
+Selby,Nqobile Hadebe, Nqobile Hadebe
+Xolani ,Nqobile Hadebe, Nqobile Hadebe
+Lefa,Nqobile Hadebe, Blessing
