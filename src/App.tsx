@@ -1,26 +1,42 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  Alert,
-  Box,
-  Container,
-  CssBaseline,
-  Snackbar,
-  ThemeProvider,
-  createTheme,
-  alpha,
+  Alert, Box, Container, CssBaseline,
+  Snackbar, ThemeProvider, createTheme, alpha,
 } from '@mui/material';
-import type { ReviewEntry, LeaderPerson } from './types/ReviewEntry';
-import { loadEntries, saveEntries, loadLeaders, saveLeaders } from './utils/storage';
-import Header from './components/Header';
-import EntryForm from './components/EntryForm';
+
+import type { ReviewEntry, LeaderPerson, Member } from './types/ReviewEntry';
+import type { AuditEntry }               from './types/AuditLog';
+
+import {
+  loadEntries,        saveEntries,
+  loadLeaders,        saveLeaders,
+  loadMembers,        saveMembers,
+  loadAuditLog,       appendAuditEntry,  clearAuditLog,
+  saveSnoozeForLeader, getSnoozeUntil,
+  clearLegacyPin,
+} from './utils/storage';
+
+import Header              from './components/Header';
+import EntryForm           from './components/EntryForm';
 import type { EntryFormValues } from './components/EntryForm';
-import EntryList from './components/EntryList';
-import type { ViewMode } from './components/EntryList';
+import EntryList           from './components/EntryList';
+import type { ViewMode }   from './components/EntryList';
+import FilterBar           from './components/FilterBar';
+import type { FilterState } from './components/FilterBar';
+import { EMPTY_FILTERS }   from './components/FilterBar';
 import DeleteConfirmationDialog from './components/DeleteConfirmationDialog';
-import LeaderSetup from './components/LeaderSetup';
-import EditLeadersDialog from './components/EditLeadersDialog';
+import LeaderSetup         from './components/LeaderSetup';
+import LeaderLogin         from './components/LeaderLogin';
+import EditLeadersDialog   from './components/EditLeadersDialog';
+import ProfileDialog       from './components/ProfileDialog';
+import AuditLogDrawer      from './components/AuditLogDrawer';
+import ReminderBanner      from './components/ReminderBanner';
+import { getReminders }    from './components/ReminderBanner';
+import MembersDialog       from './components/MembersDialog';
+
+// ── Theme ──────────────────────────────────────────────────────────────────
 
 const PURPLE = '#7c3aed';
 const PINK   = '#db2777';
@@ -93,7 +109,7 @@ const theme = createTheme({
         },
       },
     },
-    MuiSelect: { styleOverrides: { root: { borderRadius: 10, background: '#ffffff' } } },
+    MuiSelect:      { styleOverrides: { root: { borderRadius: 10, background: '#ffffff' } } },
     MuiToggleButton: {
       styleOverrides: {
         root: {
@@ -108,6 +124,8 @@ const theme = createTheme({
   },
 });
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 const VIEW_KEY = 'review-action-tracker-view';
 
 function loadViewMode(): ViewMode {
@@ -118,47 +136,195 @@ function loadViewMode(): ViewMode {
   } catch { return 'card'; }
 }
 
+function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
+  const q = f.search.toLowerCase().trim();
+  return entries.filter((e) => {
+    if (q) {
+      const name   = (e.revieweeName ?? (e as any).name ?? '').toLowerCase();
+      const review = e.review.toLowerCase();
+      const action = e.plannedAction.toLowerCase();
+      if (!name.includes(q) && !review.includes(q) && !action.includes(q)) return false;
+    }
+    if (f.reviewer     && e.leaderName   !== f.reviewer)     return false;
+    if (f.leaderRole   && e.leaderRole   !== f.leaderRole)   return false;
+    if (f.revieweeRole && e.revieweeRole !== f.revieweeRole) return false;
+    return true;
+  });
+}
+
+// Whether we should show the reminder banner for this leader right now
+function shouldShowReminder(leaderName: string): boolean {
+  const until = getSnoozeUntil(leaderName);
+  if (!until) return true;                    // never snoozed
+  return new Date() > until;                  // snooze has expired
+}
+
+// ── Auth state ─────────────────────────────────────────────────────────────
+
+type AuthState = 'leader_setup' | 'login' | 'app';
 type SnackbarState = { open: boolean; message: string; severity: 'success' | 'error' };
 
-export default function App() {
-  const [leaders, setLeaders]           = useState<LeaderPerson[]>(loadLeaders);
-  const [editLeadersOpen, setEditLeadersOpen] = useState(false);
-  const [viewMode, setViewMode]         = useState<ViewMode>(loadViewMode);
-  const [entries, setEntries]           = useState<ReviewEntry[]>(loadEntries);
-  const [editingEntry, setEditingEntry] = useState<ReviewEntry | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ReviewEntry | null>(null);
-  const [snackbar, setSnackbar]         = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
+// ── Component ──────────────────────────────────────────────────────────────
 
+export default function App() {
+  // Clean up any old single-PIN key from the previous auth model
+  useEffect(() => { clearLegacyPin(); }, []);
+
+  // ── Persistent state ──────────────────────────────────────────────────
+  const [leaders,  setLeaders]  = useState<LeaderPerson[]>(loadLeaders);
+  const [members,  setMembers]  = useState<Member[]>(loadMembers);
+  const [entries,  setEntries]  = useState<ReviewEntry[]>(loadEntries);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>(loadAuditLog);
+
+  // ── Auth state ────────────────────────────────────────────────────────
+  const [authState,      setAuthState]      = useState<AuthState>(() =>
+    loadLeaders().length === 0 ? 'leader_setup' : 'login'
+  );
+  const [currentLeader,  setCurrentLeader]  = useState<LeaderPerson | null>(null);
+  const [showReminder,   setShowReminder]   = useState(false);
+
+  // ── UI state ──────────────────────────────────────────────────────────
+  const [editLeadersOpen, setEditLeadersOpen] = useState(false);
+  const [membersOpen,     setMembersOpen]     = useState(false);
+  const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
+  const [profileOpen,     setProfileOpen]     = useState(false);
+  const [viewMode,        setViewMode]        = useState<ViewMode>(loadViewMode);
+  const [filters,         setFilters]         = useState<FilterState>(EMPTY_FILTERS);
+  const [editingEntry,    setEditingEntry]     = useState<ReviewEntry | null>(null);
+  const [deleteTarget,    setDeleteTarget]     = useState<ReviewEntry | null>(null);
+  const [snackbar,        setSnackbar]         = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
+
+  // ── Derived ───────────────────────────────────────────────────────────
+  const filteredEntries = useMemo(
+    () => applyFilters(entries, filters),
+    [entries, filters]
+  );
+
+  // Reminders: entries this leader reviewed that are ≥7 days old
+  const reminderItems = useMemo(
+    () => currentLeader ? getReminders(entries, currentLeader.name) : [],
+    [entries, currentLeader]
+  );
+
+  // ── Helpers ───────────────────────────────────────────────────────────
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
     setSnackbar({ open: true, message, severity });
 
-  const handleCloseSnackbar = () => setSnackbar((p) => ({ ...p, open: false }));
-
-  const handleViewChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    try { localStorage.setItem(VIEW_KEY, mode); } catch { /* ignore */ }
+  const addLog = (
+    action:      AuditEntry['action'],
+    description: string,
+    leaderName?: string,
+  ) => {
+    const entry = appendAuditEntry(action, description, leaderName);
+    setAuditLog((prev) => [entry, ...prev].slice(0, 500));
   };
+
+  // ── Auth handlers ─────────────────────────────────────────────────────
 
   const handleLeaderSetupComplete = (newLeaders: LeaderPerson[]) => {
     saveLeaders(newLeaders);
     setLeaders(newLeaders);
+    addLog('leaders_updated', `Team set up with ${newLeaders.length} member(s).`);
+    setAuthState('login');
   };
+
+  const handleLoginSuccess = (leader: LeaderPerson) => {
+    setCurrentLeader(leader);
+    setAuthState('app');
+    addLog('login', `${leader.displayName || leader.name} logged in.`, leader.name);
+    // Check if reminder banner should appear
+    if (shouldShowReminder(leader.name)) setShowReminder(true);
+  };
+
+  const handleLogout = () => {
+    if (currentLeader) {
+      addLog('logout', `${currentLeader.displayName || currentLeader.name} locked the app.`, currentLeader.name);
+    }
+    setCurrentLeader(null);
+    setAuthState('login');
+    setEditingEntry(null);
+    setFilters(EMPTY_FILTERS);
+    setShowReminder(false);
+    setProfileOpen(false);
+  };
+
+  // ── Reminder handlers ─────────────────────────────────────────────────
+
+  const handleSnoozeReminder = () => {
+    if (!currentLeader) return;
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    saveSnoozeForLeader(currentLeader.name, nextWeek);
+    addLog('reminder_snoozed',
+      `${currentLeader.displayName || currentLeader.name} snoozed action plan reminders until ${nextWeek.toLocaleDateString('en-GB')}.`,
+      currentLeader.name);
+    setShowReminder(false);
+    showSnackbar("We'll remind you again next week.");
+  };
+
+  const handleDismissReminder = () => setShowReminder(false);
+
+  // ── Profile handlers ──────────────────────────────────────────────────
+
+  const handleProfileSave = (updated: LeaderPerson) => {
+    const updatedLeaders = leaders.map((l) => l.name === updated.name ? updated : l);
+    saveLeaders(updatedLeaders);
+    setLeaders(updatedLeaders);
+    setCurrentLeader(updated);
+
+    // Detect what changed for the audit log
+    const prev = leaders.find((l) => l.name === updated.name);
+    if (prev?.passwordHash !== updated.passwordHash) {
+      addLog('password_changed', `${updated.displayName || updated.name} changed their password.`, updated.name);
+      showSnackbar('Password changed successfully.');
+    } else if (prev?.displayName !== updated.displayName) {
+      addLog('profile_updated',
+        `${updated.name} updated their display name to "${updated.displayName}".`, updated.name);
+      showSnackbar('Profile updated.');
+    }
+  };
+
+  // ── Leader management ─────────────────────────────────────────────────
 
   const handleEditLeadersSave = (updated: LeaderPerson[]) => {
     saveLeaders(updated);
     setLeaders(updated);
+    // Keep currentLeader in sync if their record changed
+    if (currentLeader) {
+      const refreshed = updated.find((l) => l.name === currentLeader.name);
+      if (refreshed) setCurrentLeader(refreshed);
+    }
     setEditLeadersOpen(false);
-    showSnackbar('Leaders updated successfully.');
+    addLog('leaders_updated',
+      `Team updated: ${updated.map((l) => `${l.name} (${l.role})`).join(', ')}.`,
+      currentLeader?.name);
+    showSnackbar('Team updated successfully.');
   };
+
+  // ── Member management ─────────────────────────────────────────────────
+
+  const handleMembersSave = (updated: Member[]) => {
+    saveMembers(updated);
+    setMembers(updated);
+    setMembersOpen(false);
+    addLog(
+      'leaders_updated',
+      `Group members updated: ${updated.length} member${updated.length !== 1 ? 's' : ''} in roster.`,
+      currentLeader?.name,
+    );
+    showSnackbar('Members saved successfully.');
+  };
+
+  // ── Entry handlers ────────────────────────────────────────────────────
 
   const handleAddEntry = (values: EntryFormValues) => {
     const reviewer = leaders.find((l) => l.name === values.leaderName);
     const entry: ReviewEntry = {
-      id: uuidv4(),
+      id:           uuidv4(),
       leaderName:   values.leaderName,
       leaderRole:   reviewer?.role ?? 'core',
       revieweeName: values.revieweeName.trim(),
       revieweeRole: values.revieweeRole,
+      memberId:     values.memberId,
       review:       values.review.trim(),
       plannedAction: values.plannedAction.trim(),
       createdAt:    new Date().toISOString(),
@@ -166,6 +332,9 @@ export default function App() {
     const updated = [entry, ...entries];
     setEntries(updated);
     saveEntries(updated);
+    addLog('entry_added',
+      `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
+      currentLeader?.name);
     showSnackbar('Entry added successfully.');
   };
 
@@ -174,13 +343,13 @@ export default function App() {
     const reviewer = leaders.find((l) => l.name === values.leaderName);
     const updated = entries.map((e) =>
       e.id === editingEntry.id
-        ? {
-            ...e,
-            leaderName:   values.leaderName,
-            leaderRole:   reviewer?.role ?? e.leaderRole,
-            revieweeName: values.revieweeName.trim(),
-            revieweeRole: values.revieweeRole,
-            review:       values.review.trim(),
+        ? { ...e,
+            leaderName:    values.leaderName,
+            leaderRole:    reviewer?.role ?? e.leaderRole,
+            revieweeName:  values.revieweeName.trim(),
+            revieweeRole:  values.revieweeRole,
+            memberId:      values.memberId,
+            review:        values.review.trim(),
             plannedAction: values.plannedAction.trim(),
           }
         : e
@@ -188,6 +357,9 @@ export default function App() {
     setEntries(updated);
     saveEntries(updated);
     setEditingEntry(null);
+    addLog('entry_edited',
+      `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
+      currentLeader?.name);
     showSnackbar('Entry updated successfully.');
   };
 
@@ -201,15 +373,31 @@ export default function App() {
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
+    const name = deleteTarget.revieweeName ?? (deleteTarget as any).name;
     const updated = entries.filter((e) => e.id !== deleteTarget.id);
     setEntries(updated);
     saveEntries(updated);
     setDeleteTarget(null);
+    addLog('entry_deleted', `Entry for "${name}" was deleted.`, currentLeader?.name);
     showSnackbar('Entry deleted.');
   };
 
-  // ── Setup gate ─────────────────────────────────────────────────────────
-  if (leaders.length === 0) {
+  // ── View helpers ──────────────────────────────────────────────────────
+
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    try { localStorage.setItem(VIEW_KEY, mode); } catch { /* ignore */ }
+  };
+
+  const handleClearAuditLog = () => {
+    clearAuditLog();
+    setAuditLog([]);
+    showSnackbar('Activity log cleared.');
+  };
+
+  // ── Auth gates ────────────────────────────────────────────────────────
+
+  if (authState === 'leader_setup') {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -217,6 +405,19 @@ export default function App() {
       </ThemeProvider>
     );
   }
+
+  if (authState === 'login') {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LeaderLogin leaders={leaders} onSuccess={handleLoginSuccess} />
+      </ThemeProvider>
+    );
+  }
+
+  // ── Main app (authState === 'app') ────────────────────────────────────
+
+  if (!currentLeader) return null; // type narrowing safety
 
   return (
     <ThemeProvider theme={theme}>
@@ -232,24 +433,61 @@ export default function App() {
         }}
       >
         <Container maxWidth={viewMode === 'grid' ? 'lg' : 'sm'} sx={{ transition: 'max-width 0.3s ease' }}>
-          <Header entries={entries} onEditLeaders={() => setEditLeadersOpen(true)} />
+
+          <Header
+            entries={entries}
+            currentLeader={currentLeader}
+            auditCount={auditLog.length}
+            memberCount={members.length}
+            onEditLeaders={() => setEditLeadersOpen(true)}
+            onManageMembers={() => setMembersOpen(true)}
+            onShowLog={() => setAuditDrawerOpen(true)}
+            onProfile={() => setProfileOpen(true)}
+            onLogout={handleLogout}
+          />
+
+          {/* Weekly action-plan reminder banner */}
+          {showReminder && reminderItems.length > 0 && (
+            <ReminderBanner
+              items={reminderItems}
+              onSnooze={handleSnoozeReminder}
+              onDismiss={handleDismissReminder}
+            />
+          )}
+
+          {/* Entry form — stays narrow in grid mode */}
           <Box sx={{ maxWidth: viewMode === 'grid' ? 600 : 'none', mx: viewMode === 'grid' ? 'auto' : 0 }}>
             <EntryForm
               leaders={leaders}
+              members={members}
               onSubmit={handleFormSubmit}
               editingEntry={editingEntry}
               onCancelEdit={() => setEditingEntry(null)}
             />
           </Box>
+
+          {/* Filters */}
+          <FilterBar
+            filters={filters}
+            leaders={leaders}
+            totalCount={entries.length}
+            filteredCount={filteredEntries.length}
+            onChange={setFilters}
+          />
+
+          {/* Entry list */}
           <EntryList
-            entries={entries}
+            entries={filteredEntries}
             viewMode={viewMode}
             onViewChange={handleViewChange}
             onEdit={handleStartEdit}
             onDelete={setDeleteTarget}
           />
+
         </Container>
       </Box>
+
+      {/* ── Dialogs & drawers ── */}
 
       <DeleteConfirmationDialog
         entry={deleteTarget}
@@ -265,14 +503,40 @@ export default function App() {
         onClose={() => setEditLeadersOpen(false)}
       />
 
+      <MembersDialog
+        open={membersOpen}
+        members={members}
+        leaders={leaders}
+        onSave={handleMembersSave}
+        onClose={() => setMembersOpen(false)}
+      />
+
+      <ProfileDialog
+        open={profileOpen}
+        leader={currentLeader}
+        onSave={handleProfileSave}
+        onClose={() => setProfileOpen(false)}
+      />
+
+      <AuditLogDrawer
+        open={auditDrawerOpen}
+        log={auditLog}
+        onClose={() => setAuditDrawerOpen(false)}
+        onClear={handleClearAuditLog}
+      />
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
+        onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled"
-          sx={{ width: '100%', borderRadius: 3, boxShadow: 4 }}>
+        <Alert
+          onClose={() => setSnackbar((p) => ({ ...p, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', borderRadius: 3, boxShadow: 4 }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
