@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Alert, Box, Button, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, Divider, IconButton,
-  InputAdornment, TextField, ToggleButton, ToggleButtonGroup,
+  InputAdornment, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup,
   Typography, alpha,
 } from '@mui/material';
 import AddIcon           from '@mui/icons-material/Add';
@@ -11,6 +11,7 @@ import StarOutlinedIcon  from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import WarningAmberIcon  from '@mui/icons-material/WarningAmberRounded';
 import { hashPin }       from '../utils/crypto';
+import CsvImportPanel    from './CsvImportPanel';
 import type { LeaderPerson, LeaderRole } from '../types/ReviewEntry';
 
 const MAX_LEADERS = 10;
@@ -41,12 +42,14 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
   const [draft,      setDraft]      = useState<Draft>(EMPTY_DRAFT);
   const [draftError, setDraftError] = useState('');
   const [adding,     setAdding]     = useState(false);
+  const [inputTab,   setInputTab]   = useState(0); // 0 = one by one, 1 = CSV
 
   useEffect(() => {
     if (open) {
       setLeaders(currentLeaders);
       setDraft(EMPTY_DRAFT);
       setDraftError('');
+      setInputTab(0);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -71,6 +74,24 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
     }
   };
 
+  // CSV import: Name, Role, Password
+  const handleCsvImport = async (rows: string[][]) => {
+    const toAdd: LeaderPerson[] = [];
+    for (const row of rows) {
+      const [name = '', roleRaw = '', password = ''] = row;
+      const trimmedName = name.trim();
+      const role: LeaderRole = roleRaw.toLowerCase().includes('leader') ? 'leader' : 'core';
+      const pw = password.trim();
+      if (!trimmedName) continue;
+      if (leaders.some((l) => l.name.toLowerCase() === trimmedName.toLowerCase())) continue;
+      const hash = pw.length >= 4 ? await hashPin(pw) : '';
+      toAdd.push({ name: trimmedName, role, passwordHash: hash });
+    }
+    if (toAdd.length > 0) {
+      setLeaders((p) => [...p, ...toAdd].slice(0, MAX_LEADERS));
+    }
+  };
+
   const handleRoleToggle = (name: string, newRole: LeaderRole) =>
     setLeaders((p) => p.map((l) => l.name === name ? { ...l, role: newRole } : l));
 
@@ -87,46 +108,65 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
       </DialogTitle>
 
       <DialogContent sx={{ pt: 0.5 }}>
-        {/* Add new person */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2.5 }}>
-          <ToggleButtonGroup value={draft.role} exclusive size="small" fullWidth
-            onChange={(_, v) => { if (v) setD({ role: v as LeaderRole }); }}
-            sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 600 } }}>
-            <ToggleButton value="leader" sx={{ gap: 0.75 }}>
-              <StarOutlinedIcon sx={{ fontSize: 15 }} /> Leader
-            </ToggleButton>
-            <ToggleButton value="core" sx={{ gap: 0.75 }}>
-              <GroupsOutlinedIcon sx={{ fontSize: 15 }} /> Core / Intern
-            </ToggleButton>
-          </ToggleButtonGroup>
+        {/* Add new person — tabs */}
+        <Tabs value={inputTab} onChange={(_, v) => setInputTab(v)}
+          sx={{ mb: 2, minHeight: 36, '& .MuiTab-root': { minHeight: 36, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem' } }}>
+          <Tab label="Add one by one" />
+          <Tab label="Import CSV" />
+        </Tabs>
 
-          <TextField size="small" label="Name" fullWidth value={draft.name}
-            onChange={(e) => setD({ name: e.target.value })}
-            disabled={adding || leaders.length >= MAX_LEADERS}
-            placeholder="New person's name" />
-          <TextField size="small" label="Password" type="password" fullWidth
-            value={draft.password} onChange={(e) => setD({ password: e.target.value })}
-            disabled={adding || leaders.length >= MAX_LEADERS}
-            helperText="Min 4 characters" />
-          <TextField size="small" label="Confirm password" type="password" fullWidth
-            value={draft.confirm} onChange={(e) => setD({ confirm: e.target.value })}
-            disabled={adding || leaders.length >= MAX_LEADERS}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={handleAdd}
-                      disabled={adding || leaders.length >= MAX_LEADERS || !draft.name.trim() || !draft.password}
-                      edge="end" color="primary" aria-label="Add person">
-                      <AddIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }} />
-        </Box>
+        {inputTab === 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2.5 }}>
+            <ToggleButtonGroup value={draft.role} exclusive size="small" fullWidth
+              onChange={(_, v) => { if (v) setD({ role: v as LeaderRole }); }}
+              sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 600 } }}>
+              <ToggleButton value="leader" sx={{ gap: 0.75 }}>
+                <StarOutlinedIcon sx={{ fontSize: 15 }} /> Leader
+              </ToggleButton>
+              <ToggleButton value="core" sx={{ gap: 0.75 }}>
+                <GroupsOutlinedIcon sx={{ fontSize: 15 }} /> Core / Intern
+              </ToggleButton>
+            </ToggleButtonGroup>
 
-        {draftError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{draftError}</Alert>}
+            <TextField size="small" label="Name" fullWidth value={draft.name}
+              onChange={(e) => setD({ name: e.target.value })}
+              disabled={adding || leaders.length >= MAX_LEADERS}
+              placeholder="New person's name" />
+            <TextField size="small" label="Password" type="password" fullWidth
+              value={draft.password} onChange={(e) => setD({ password: e.target.value })}
+              disabled={adding || leaders.length >= MAX_LEADERS}
+              helperText="Min 4 characters" />
+            <TextField size="small" label="Confirm password" type="password" fullWidth
+              value={draft.confirm} onChange={(e) => setD({ confirm: e.target.value })}
+              disabled={adding || leaders.length >= MAX_LEADERS}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={handleAdd}
+                        disabled={adding || leaders.length >= MAX_LEADERS || !draft.name.trim() || !draft.password}
+                        edge="end" color="primary" aria-label="Add person">
+                        <AddIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }} />
+
+            {draftError && <Alert severity="error" sx={{ borderRadius: 2 }}>{draftError}</Alert>}
+          </Box>
+        )}
+
+        {inputTab === 1 && (
+          <Box sx={{ mb: 2.5 }}>
+            <CsvImportPanel
+              formatHint="Each line: Name, Role (leader or core), Password  —  passwords shorter than 4 chars will be left blank."
+              example={`Shereen, leader, mypassword\nAisha, core, aisha1234`}
+              onImport={handleCsvImport}
+              disabled={leaders.length >= MAX_LEADERS}
+            />
+          </Box>
+        )}
 
         <Divider sx={{ mb: 2 }} />
 

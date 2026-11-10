@@ -3,7 +3,7 @@ import {
   Avatar, Box, Button, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, Divider, FormControl,
   FormHelperText, IconButton, InputLabel, MenuItem,
-  Select, TextField, Tooltip, Typography, alpha,
+  Select, Tab, Tabs, TextField, Tooltip, Typography, alpha,
 } from '@mui/material';
 import AddIcon            from '@mui/icons-material/Add';
 import EditOutlinedIcon   from '@mui/icons-material/EditOutlined';
@@ -13,6 +13,7 @@ import SaveOutlinedIcon   from '@mui/icons-material/SaveOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import StarOutlinedIcon   from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import CsvImportPanel     from './CsvImportPanel';
 import type { Member, LeaderPerson } from '../types/ReviewEntry';
 
 // ── Colour helpers ─────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ export default function MembersDialog({
   const [editingId,  setEditingId]  = useState<string | null>(null);
   const [errors,     setErrors]     = useState<Partial<MemberDraft>>({});
   const [showForm,   setShowForm]   = useState(false);
+  const [inputTab,   setInputTab]   = useState(0); // 0 = one by one, 1 = CSV
 
   // Sync when dialog opens
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function MembersDialog({
       setEditingId(null);
       setErrors({});
       setShowForm(false);
+      setInputTab(0);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -78,6 +81,44 @@ export default function MembersDialog({
   const setD = (p: Partial<MemberDraft>) => {
     setDraft((d) => ({ ...d, ...p }));
     setErrors((e) => ({ ...e, ...Object.fromEntries(Object.keys(p).map((k) => [k, ''])) }));
+  };
+
+  // ── CSV import ─────────────────────────────────────────────────────────
+  // Format: Name, Assigned Leader, Assigned Core (optional)
+  const handleCsvImport = (rows: string[][]) => {
+    const toAdd: Member[] = [];
+    for (const row of rows) {
+      const [name = '', leaderName = '', coreName = ''] = row;
+      const trimmedName   = name.trim();
+      const trimmedLeader = leaderName.trim();
+      if (!trimmedName || !trimmedLeader) continue;
+      // Skip duplicates
+      if (list.some((m) => m.name.toLowerCase() === trimmedName.toLowerCase())) continue;
+      // Validate leader exists (warn-and-skip if not)
+      const leaderExists = leaders.some(
+        (l) => l.role === 'leader' && l.name.toLowerCase() === trimmedLeader.toLowerCase()
+      );
+      if (!leaderExists) continue;
+      // Find exact leader name (case-insensitive match → use stored name)
+      const matchedLeader = leaders.find(
+        (l) => l.role === 'leader' && l.name.toLowerCase() === trimmedLeader.toLowerCase()
+      )!;
+      const matchedCore = coreName.trim()
+        ? leaders.find(
+            (l) => l.role === 'core' && l.name.toLowerCase() === coreName.trim().toLowerCase()
+          )
+        : undefined;
+
+      toAdd.push({
+        id:             crypto.randomUUID(),
+        name:           trimmedName,
+        assignedLeader: matchedLeader.name,
+        assignedCore:   matchedCore?.name,
+      });
+    }
+    if (toAdd.length > 0) {
+      setList((p) => [...p, ...toAdd]);
+    }
   };
 
   // ── Validate ──────────────────────────────────────────────────────────
@@ -195,8 +236,28 @@ export default function MembersDialog({
 
       <DialogContent sx={{ pt: 0.5, pb: 1 }}>
 
-        {/* ── Add / Edit form ── */}
-        {showForm ? (
+        {/* ── Input tabs ── */}
+        <Tabs value={inputTab} onChange={(_, v) => { setInputTab(v); if (showForm && v === 1) handleCancel(); }}
+          sx={{ mb: 2, minHeight: 36, '& .MuiTab-root': { minHeight: 36, textTransform: 'none', fontWeight: 600, fontSize: '0.82rem' } }}>
+          <Tab label="Add one by one" />
+          <Tab label="Import CSV" />
+        </Tabs>
+
+        {/* ── CSV import tab ── */}
+        {inputTab === 1 && (
+          <Box sx={{ mb: 2.5 }}>
+            <CsvImportPanel
+              formatHint={`Each line: Member Name, Leader Name, Core Name (optional)\nLeader and Core names must match existing team members exactly.`}
+              example={`Fatima, Shereen\nZainab, Shereen, Aisha\nMaryam, Fatimah`}
+              onImport={handleCsvImport}
+            />
+          </Box>
+        )}
+
+        {/* ── One-by-one tab: Add / Edit form ── */}
+        {inputTab === 0 && (
+          <>
+            {showForm ? (
           <Box
             sx={{
               p: 2, mb: 2.5, borderRadius: 3,
@@ -305,17 +366,19 @@ export default function MembersDialog({
               </Box>
             </Box>
           </Box>
-        ) : (
-          <Button
-            fullWidth
-            variant="outlined"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => setShowForm(true)}
-            sx={{ mb: 2.5, py: 1 }}
-          >
-            Add new member
-          </Button>
+          ) : (
+            <Button
+              fullWidth
+              variant="outlined"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => setShowForm(true)}
+              sx={{ mb: 2.5, py: 1 }}
+            >
+              Add new member
+            </Button>
+          )}
+          </>
         )}
 
         {/* ── Member roster ── */}
