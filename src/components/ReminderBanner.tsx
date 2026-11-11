@@ -57,7 +57,7 @@ export default function ReminderBanner({ items, onSnooze, onDismiss }: ReminderB
       }}
     >
       {/* Top accent strip */}
-      <Box sx={{ height: 4, background: 'linear-gradient(90deg, #f59e0b 0%, #ef4444 50%, #f59e0b 100%)', backgroundSize: '200% 100%' }} />
+      <Box className="shimmer-strip" sx={{ height: 4, background: 'linear-gradient(90deg, #f59e0b 0%, #ef4444 50%, #f59e0b 100%)', backgroundSize: '200% 100%' }} />
 
       <Box sx={{ p: 2.5 }}>
         {/* Header */}

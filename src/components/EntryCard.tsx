@@ -48,13 +48,20 @@ export default function EntryCard({ entry, onEdit, onDelete, onToggleAction }: E
     <Card
       sx={{
         position: 'relative', overflow: 'visible',
-        transition: 'box-shadow 0.15s ease',
-        '&:hover': { boxShadow: 4 },
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        '&:hover': {
+          boxShadow: 5,
+          transform: 'translateY(-2px)',
+        },
         '&::before': {
           content: '""', position: 'absolute',
-          left: 0, top: 12, bottom: 12, width: 3,
-          borderRadius: '0 3px 3px 0',
+          left: 0, top: 12, bottom: 12, width: 4,
+          borderRadius: '0 4px 4px 0',
           background: 'linear-gradient(180deg, #7c3aed 0%, #db2777 100%)',
+          transition: 'height 0.2s ease',
+        },
+        '&:hover::before': {
+          top: 6, bottom: 6,
         },
       }}
     >

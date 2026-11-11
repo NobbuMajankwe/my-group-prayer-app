@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  Alert, Box, Container, CssBaseline,
+  Alert, Box, CssBaseline,
   Snackbar, ThemeProvider, createTheme, alpha,
 } from '@mui/material';
 
@@ -485,12 +485,23 @@ export default function App() {
           minHeight: '100vh',
           bgcolor: 'background.default',
           backgroundImage:
-            'radial-gradient(ellipse 60% 40% at 0% 0%, #ede9fe 0%, transparent 60%),' +
-            'radial-gradient(ellipse 50% 40% at 100% 100%, #fce7f3 0%, transparent 60%)',
-          py: { xs: 3, sm: 5 },
+            'radial-gradient(ellipse 70% 45% at 0% 0%, #ede9fe 0%, transparent 55%),' +
+            'radial-gradient(ellipse 55% 45% at 100% 100%, #fce7f3 0%, transparent 55%),' +
+            'radial-gradient(ellipse 40% 30% at 50% 50%, rgba(167,139,250,0.06) 0%, transparent 70%)',
+          py: { xs: 2.5, sm: 5 },
+          px: { xs: 1, sm: 0 },
         }}
       >
-        <Container maxWidth={viewMode === 'grid' ? 'lg' : 'sm'} sx={{ transition: 'max-width 0.3s ease' }}>
+        {/* 85% width on desktop, full width on mobile */}
+        <Box
+          sx={{
+            width: { xs: '100%', sm: '90%', md: '85%' },
+            maxWidth: viewMode === 'grid' ? 1400 : 1100,
+            mx: 'auto',
+            px: { xs: 1, sm: 2 },
+            transition: 'max-width 0.3s ease',
+          }}
+        >
 
           <Header
             entries={entries}
@@ -524,7 +535,7 @@ export default function App() {
           )}
 
           {/* Entry form — stays narrow in grid mode */}
-          <Box sx={{ maxWidth: viewMode === 'grid' ? 600 : 'none', mx: viewMode === 'grid' ? 'auto' : 0 }}>
+          <Box sx={{ maxWidth: viewMode === 'grid' ? 640 : 'none', mx: viewMode === 'grid' ? 'auto' : 0 }}>
             <EntryForm
               leaders={leaders}
               members={members}
@@ -553,7 +564,7 @@ export default function App() {
             onToggleAction={handleToggleAction}
           />
 
-        </Container>
+        </Box>
       </Box>
 
       {/* ── Dialogs & drawers ── */}

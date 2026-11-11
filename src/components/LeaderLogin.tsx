@@ -85,24 +85,41 @@ export default function LeaderLogin({ leaders, onSuccess }: LeaderLoginProps) {
         justifyContent: 'center', px: 2, bgcolor: '#faf5ff',
         backgroundImage:
           'radial-gradient(ellipse 60% 50% at 10% 10%, #ede9fe 0%, transparent 60%),' +
-          'radial-gradient(ellipse 50% 40% at 90% 90%, #fce7f3 0%, transparent 60%)',
+          'radial-gradient(ellipse 50% 40% at 90% 90%, #fce7f3 0%, transparent 60%),' +
+          'radial-gradient(ellipse 35% 25% at 50% 50%, rgba(167,139,250,0.08) 0%, transparent 70%)',
       }}
     >
       <Paper
         elevation={3}
         sx={{
           width: '100%', maxWidth: 420, p: { xs: 3, sm: 4 },
-          borderRadius: 4, border: '1px solid', borderColor: alpha('#7c3aed', 0.12),
+          borderRadius: 4,
+          border: '1px solid', borderColor: alpha('#7c3aed', 0.12),
+          animation: 'fadeIn 0.4s ease',
+          '@keyframes fadeIn': {
+            from: { opacity: 0, transform: 'translateY(16px)' },
+            to:   { opacity: 1, transform: 'translateY(0)' },
+          },
         }}
       >
         {/* Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <Box
-            component="img"
-            src="/favicon_io/android-chrome-192x192.png"
-            alt="logo"
-            sx={{ width: 44, height: 44, borderRadius: 2.5, boxShadow: '0 2px 8px rgba(124,58,237,0.18)' }}
-          />
+            sx={{
+              width: 44, height: 44, borderRadius: 2.5,
+              background: 'linear-gradient(135deg, #7c3aed, #db2777)',
+              p: '2px',
+              boxShadow: '0 4px 16px rgba(124,58,237,0.3)',
+              flexShrink: 0,
+            }}
+          >
+            <Box
+              component="img"
+              src="/favicon_io/android-chrome-192x192.png"
+              alt="logo"
+              sx={{ width: '100%', height: '100%', borderRadius: 2, display: 'block' }}
+            />
+          </Box>
           <Box>
             <Typography variant="h6" sx={{
               fontWeight: 800,
@@ -121,15 +138,17 @@ export default function LeaderLogin({ leaders, onSuccess }: LeaderLoginProps) {
         {/* ── Step 1: pick who you are ── */}
         {!selected && (
           <>
-            <Typography variant="h6" sx={{ color: 'primary.main', mb: 0.5 }}>
-              Who are you?
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
-              Select your name to continue.
-            </Typography>
+            <Box sx={{ mb: 2.5 }}>
+              <Typography variant="h6" sx={{ color: 'primary.main', mb: 0.25, fontWeight: 800 }}>
+                Who are you? 👋
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Select your name to continue.
+              </Typography>
+            </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {leaders.map((l) => {
+              {leaders.map((l, idx) => {
                 const rc = ROLE_COLOURS[l.role];
                 return (
                   <Box
@@ -140,11 +159,17 @@ export default function LeaderLogin({ leaders, onSuccess }: LeaderLoginProps) {
                       px: 2, py: 1.5, borderRadius: 3, cursor: 'pointer',
                       border: '1px solid', borderColor: alpha('#7c3aed', 0.1),
                       bgcolor: 'background.paper',
-                      transition: 'all 0.12s',
+                      transition: 'all 0.15s ease',
+                      animation: `slideIn 0.3s ease ${idx * 0.06}s both`,
+                      '@keyframes slideIn': {
+                        from: { opacity: 0, transform: 'translateX(-10px)' },
+                        to:   { opacity: 1, transform: 'translateX(0)' },
+                      },
                       '&:hover': {
                         bgcolor: alpha('#7c3aed', 0.05),
-                        borderColor: alpha('#7c3aed', 0.25),
+                        borderColor: alpha('#7c3aed', 0.3),
                         boxShadow: 2,
+                        transform: 'translateX(4px)',
                       },
                     }}
                   >

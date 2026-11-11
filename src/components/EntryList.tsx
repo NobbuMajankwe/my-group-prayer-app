@@ -89,19 +89,23 @@ export default function EntryList({ entries, viewMode, onViewChange, onEdit, onD
         <Box
           sx={{
             textAlign: 'center',
-            py: 8,
+            py: { xs: 7, sm: 10 },
             borderRadius: 4,
             border: '1.5px dashed',
-            borderColor: alpha('#7c3aed', 0.18),
+            borderColor: alpha('#7c3aed', 0.2),
             bgcolor: alpha('#7c3aed', 0.02),
+            backgroundImage: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(219,39,119,0.04) 0%, transparent 70%)',
           }}
         >
-          <NoteAltOutlinedIcon sx={{ fontSize: 40, color: alpha('#7c3aed', 0.25), mb: 1.5 }} />
-          <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5 }}>
+          <NoteAltOutlinedIcon
+            className="float"
+            sx={{ fontSize: { xs: 44, sm: 54 }, color: alpha('#7c3aed', 0.3), mb: 2 }}
+          />
+          <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 700, mb: 0.75 }}>
             No entries yet
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-            Fill in the form above to add your first entry.
+          <Typography variant="body2" sx={{ color: 'text.disabled', maxWidth: 300, mx: 'auto' }}>
+            Fill in the form above to log your first prayer review. 🙏
           </Typography>
         </Box>
 

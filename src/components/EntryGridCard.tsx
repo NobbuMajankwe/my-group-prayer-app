@@ -64,8 +64,8 @@ export default function EntryGridCard({ entry, onEdit, onDelete, onToggleAction 
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        transition: 'box-shadow 0.15s ease, transform 0.15s ease',
-        '&:hover': { boxShadow: 4, transform: 'translateY(-2px)' },
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        '&:hover': { boxShadow: 5, transform: 'translateY(-3px)' },
         // Top accent bar
         '&::before': {
           content: '""',
@@ -76,6 +76,10 @@ export default function EntryGridCard({ entry, onEdit, onDelete, onToggleAction 
           height: 3,
           borderRadius: '0 0 3px 3px',
           background: `linear-gradient(90deg, ${PURPLE} 0%, ${PINK} 100%)`,
+          transition: 'left 0.2s ease, right 0.2s ease',
+        },
+        '&:hover::before': {
+          left: 6, right: 6,
         },
       }}
     >

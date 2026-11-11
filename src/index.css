@@ -22,3 +22,75 @@ input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
 }
+
+/* Custom scrollbar — purple-tinted */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.25);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.45);
+}
+
+/* Smooth transitions on interactive elements */
+a, button {
+  transition: opacity 0.15s ease;
+}
+
+/* Subtle page-load fade-in */
+#root {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Wiggle animation for notification bell */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  15%  { transform: rotate(-10deg); }
+  30%  { transform: rotate(10deg); }
+  45%  { transform: rotate(-6deg); }
+  60%  { transform: rotate(6deg); }
+  75%  { transform: rotate(-3deg); }
+}
+.wiggle {
+  animation: wiggle 1.5s ease 0.5s;
+}
+
+/* Shimmer animation for gradient accent strip */
+@keyframes shimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.shimmer-strip {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Floating animation for empty state icon */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse ring for action items */
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.3); }
+  70%  { box-shadow: 0 0 0 8px rgba(124,58,237,0); }
+  100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+}
+

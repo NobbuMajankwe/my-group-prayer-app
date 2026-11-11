@@ -113,73 +113,115 @@ export default function EntryForm({
   }));
 
   return (
-    <Card sx={{ mb: 4 }}>
-      <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-        <Typography variant="h6" sx={{ mb: 2.5, color: 'primary.main' }}>
-          {isEditing ? 'Edit entry' : 'New entry'}
-        </Typography>
+    <Card
+      sx={{
+        mb: 4,
+        position: 'relative',
+        overflow: 'visible',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0, left: 12, right: 12, height: 3,
+          borderRadius: '0 0 3px 3px',
+          background: isEditing
+            ? 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)'
+            : 'linear-gradient(90deg, #7c3aed 0%, #db2777 100%)',
+          transition: 'background 0.3s ease',
+        },
+      }}
+    >
+      <CardContent sx={{ p: { xs: 2.5, sm: 3.5 }, pt: { xs: 3, sm: 3.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+          <Box
+            sx={{
+              width: 36, height: 36, borderRadius: 2.5, flexShrink: 0,
+              background: isEditing
+                ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
+                : 'linear-gradient(135deg, #7c3aed, #db2777)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: isEditing
+                ? '0 2px 10px rgba(245,158,11,0.35)'
+                : '0 2px 10px rgba(124,58,237,0.35)',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            {isEditing
+              ? <SaveIcon sx={{ fontSize: 18, color: '#fff' }} />
+              : <AddIcon  sx={{ fontSize: 18, color: '#fff' }} />}
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ color: isEditing ? '#92400e' : 'primary.main', lineHeight: 1.2 }}>
+              {isEditing ? 'Edit entry' : 'New entry'}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              {isEditing ? 'Make your changes below' : 'Fill in the details to add a review'}
+            </Typography>
+          </Box>
+        </Box>
 
         <Box
           component="form"
           onSubmit={handleSubmit(handleFormSubmit)}
           noValidate
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
         >
-          {/* ── Reviewer ──────────────────────────────────────── */}
-          <Controller
-            name="leaderName"
-            control={control}
-            rules={{ required: 'Please select a reviewer.' }}
-            render={({ field }) => (
-              <FormControl fullWidth error={Boolean(errors.leaderName)}>
-                <InputLabel id="leader-label">Reviewer</InputLabel>
-                <Select {...field} labelId="leader-label" label="Reviewer"
-                  onChange={(e) => {
-                    field.onChange(e);
-                    // Clear participant when reviewer changes
-                    setValue('revieweeName', '');
-                    setValue('memberId', undefined);
-                  }}>
-                  {leaders.map((l) => (
-                    <MenuItem key={l.name} value={l.name}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {l.role === 'leader'
-                          ? <StarOutlinedIcon   sx={{ fontSize: 14, color: '#eab308' }} />
-                          : <GroupsOutlinedIcon sx={{ fontSize: 14, color: '#14b8a6' }} />}
-                        {l.displayName || l.name}
-                        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>
-                          {l.role === 'leader' ? 'Leader' : 'Core'}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>
-                  {errors.leaderName?.message ?? 'Who is conducting this review?'}
-                </FormHelperText>
-              </FormControl>
-            )}
-          />
-
-          {/* ── Reviewee role (leaders only) ───────────────────── */}
-          {isLeader && (
+          {/* ── Reviewer + Role row ───────────────────────────────── */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: isLeader ? '1fr 1fr' : '1fr' }, gap: 2 }}>
+            {/* Reviewer */}
             <Controller
-              name="revieweeRole"
+              name="leaderName"
               control={control}
+              rules={{ required: 'Please select a reviewer.' }}
               render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel id="reviewee-role-label">Reviewing a…</InputLabel>
-                  <Select {...field} labelId="reviewee-role-label" label="Reviewing a…">
-                    <MenuItem value="member">Member</MenuItem>
-                    <MenuItem value="core">Core / Intern</MenuItem>
+                <FormControl fullWidth error={Boolean(errors.leaderName)}>
+                  <InputLabel id="leader-label">Reviewer</InputLabel>
+                  <Select {...field} labelId="leader-label" label="Reviewer"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setValue('revieweeName', '');
+                      setValue('memberId', undefined);
+                    }}>
+                    {leaders.map((l) => (
+                      <MenuItem key={l.name} value={l.name}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {l.role === 'leader'
+                            ? <StarOutlinedIcon   sx={{ fontSize: 14, color: '#eab308' }} />
+                            : <GroupsOutlinedIcon sx={{ fontSize: 14, color: '#14b8a6' }} />}
+                          {l.displayName || l.name}
+                          <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>
+                            {l.role === 'leader' ? 'Leader' : 'Core'}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
                   </Select>
                   <FormHelperText>
-                    Leaders can review both members and core/interns.
+                    {errors.leaderName?.message ?? 'Who is conducting this review?'}
                   </FormHelperText>
                 </FormControl>
               )}
             />
-          )}
+
+            {/* Reviewee role (leaders only) */}
+            {isLeader && (
+              <Controller
+                name="revieweeRole"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel id="reviewee-role-label">Reviewing a…</InputLabel>
+                    <Select {...field} labelId="reviewee-role-label" label="Reviewing a…">
+                      <MenuItem value="member">Member</MenuItem>
+                      <MenuItem value="core">Core / Intern</MenuItem>
+                    </Select>
+                    <FormHelperText>
+                      Leaders can review both members and core/interns.
+                    </FormHelperText>
+                  </FormControl>
+                )}
+              />
+            )}
+          </Box>
 
           {/* ── Participant — dropdown from roster OR free-text ── */}
           <Controller
@@ -270,28 +312,33 @@ export default function EntryForm({
             }}
           />
 
-          {/* ── Review ────────────────────────────────────────── */}
-          <TextField
-            label="Review"
-            fullWidth required multiline rows={4}
-            error={Boolean(errors.review)}
-            helperText={errors.review?.message}
-            {...register('review', { required: 'Review is required.' })}
-          />
-
-          {/* ── Planned action ────────────────────────────────── */}
-          <TextField
-            label="Planned action"
-            fullWidth required multiline rows={4}
-            error={Boolean(errors.plannedAction)}
-            helperText={errors.plannedAction?.message}
-            {...register('plannedAction', { required: 'Planned action is required.' })}
-          />
+          {/* ── Review + Planned action — side by side on md+ ─── */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <TextField
+              label="Review"
+              fullWidth required multiline rows={4}
+              error={Boolean(errors.review)}
+              helperText={errors.review?.message ?? 'How did they do?'}
+              {...register('review', { required: 'Review is required.' })}
+            />
+            <TextField
+              label="Planned action"
+              fullWidth required multiline rows={4}
+              error={Boolean(errors.plannedAction)}
+              helperText={errors.plannedAction?.message ?? 'What\'s the follow-up?'}
+              {...register('plannedAction', { required: 'Planned action is required.' })}
+            />
+          </Box>
 
           {/* ── Submit / cancel ───────────────────────────────── */}
-          <Box sx={{ display: 'flex', gap: 1.5, pt: 0.5 }}>
-            <Button type="submit" variant="contained" color="primary"
-              startIcon={isEditing ? <SaveIcon /> : <AddIcon />}>
+          <Box sx={{ display: 'flex', gap: 1.5, pt: 0.5, flexWrap: 'wrap' }}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              startIcon={isEditing ? <SaveIcon /> : <AddIcon />}
+              sx={{ minWidth: 140 }}
+            >
               {isEditing ? 'Save changes' : 'Add entry'}
             </Button>
             {isEditing && (
