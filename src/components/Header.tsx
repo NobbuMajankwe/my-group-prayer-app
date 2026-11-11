@@ -4,6 +4,7 @@ import GroupIcon         from '@mui/icons-material/PeopleAltOutlined';
 import HistoryIcon       from '@mui/icons-material/HistoryOutlined';
 import LogoutIcon        from '@mui/icons-material/LogoutOutlined';
 import PersonIcon        from '@mui/icons-material/PersonOutlined';
+import DashboardIcon     from '@mui/icons-material/DashboardOutlined';
 import StarOutlinedIcon  from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
@@ -23,13 +24,14 @@ interface HeaderProps {
   onEditLeaders:   () => void;
   onManageMembers: () => void;
   onShowLog:       () => void;
+  onShowStatus:     () => void;
   onProfile:       () => void;
   onLogout:        () => void;
 }
 
 export default function Header({
   entries, currentLeader, auditCount, memberCount,
-  onEditLeaders, onManageMembers, onShowLog, onProfile, onLogout,
+  onEditLeaders, onManageMembers, onShowLog, onShowStatus, onProfile, onLogout,
 }: HeaderProps) {
   const displayName = currentLeader.displayName || currentLeader.name;
   const initials    = displayName.slice(0, 2).toUpperCase();
@@ -133,6 +135,14 @@ export default function Header({
               </Tooltip>
             </>
           )}
+
+          {/* Review status dashboard */}
+          <Tooltip title="Review status overview">
+            <Button variant="outlined" color="primary" size="small" startIcon={<DashboardIcon />}
+              onClick={onShowStatus}>
+              Status
+            </Button>
+          </Tooltip>
 
           {/* Activity log */}
           <Tooltip title="Activity log">

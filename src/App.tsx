@@ -40,6 +40,7 @@ import ReminderBanner      from './components/ReminderBanner';
 import { getReminders }    from './components/ReminderBanner';
 import NotificationPrompt  from './components/NotificationPrompt';
 import MembersDialog       from './components/MembersDialog';
+import ReviewStatusDashboard from './components/ReviewStatusDashboard';
 import {
   checkAndShowReminder,
   requestNotificationPermission,
@@ -201,6 +202,7 @@ export default function App() {
   // ── UI state ──────────────────────────────────────────────────────────
   const [editLeadersOpen, setEditLeadersOpen] = useState(false);
   const [membersOpen,     setMembersOpen]     = useState(false);
+  const [statusOpen,      setStatusOpen]      = useState(false);
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
   const [profileOpen,     setProfileOpen]     = useState(false);
   const [viewMode,        setViewMode]        = useState<ViewMode>(loadViewMode);
@@ -401,6 +403,27 @@ export default function App() {
   const handleFormSubmit = (values: EntryFormValues) =>
     editingEntry ? handleEditEntry(values) : handleAddEntry(values);
 
+  const handleToggleAction = (entry: ReviewEntry) => {
+    const updated = entries.map((e) =>
+      e.id === entry.id
+        ? {
+            ...e,
+            actionCompleted:    !e.actionCompleted,
+            actionCompletedAt:   !e.actionCompleted ? new Date().toISOString() : undefined,
+          }
+        : e
+    );
+    setEntries(updated);
+    const toggled = updated.find((e) => e.id === entry.id)!;
+    dbSaveEntry(toggled);
+    addLog(
+      toggled.actionCompleted ? 'entry_edited' : 'entry_edited',
+      `Action for "${entry.revieweeName}" marked as ${toggled.actionCompleted ? 'completed' : 'pending'} by ${currentLeader?.name ?? entry.leaderName}.`,
+      currentLeader?.name,
+    );
+    showSnackbar(toggled.actionCompleted ? 'Action marked as completed.' : 'Action marked as pending.');
+  };
+
   const handleStartEdit = (entry: ReviewEntry) => {
     setEditingEntry(entry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -477,6 +500,7 @@ export default function App() {
             onEditLeaders={() => setEditLeadersOpen(true)}
             onManageMembers={() => setMembersOpen(true)}
             onShowLog={() => setAuditDrawerOpen(true)}
+            onShowStatus={() => setStatusOpen(true)}
             onProfile={() => setProfileOpen(true)}
             onLogout={handleLogout}
           />
@@ -526,6 +550,7 @@ export default function App() {
             onViewChange={handleViewChange}
             onEdit={handleStartEdit}
             onDelete={setDeleteTarget}
+            onToggleAction={handleToggleAction}
           />
 
         </Container>
@@ -553,6 +578,15 @@ export default function App() {
         leaders={leaders}
         onSave={handleMembersSave}
         onClose={() => setMembersOpen(false)}
+      />
+
+      <ReviewStatusDashboard
+        open={statusOpen}
+        entries={entries}
+        members={members}
+        currentLeader={currentLeader}
+        onToggleAction={handleToggleAction}
+        onClose={() => setStatusOpen(false)}
       />
 
       <ProfileDialog

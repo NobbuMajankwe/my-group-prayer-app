@@ -22,8 +22,10 @@ export interface ReviewEntry {
   leaderRole:   LeaderRole;
   revieweeName: string;
   revieweeRole: RevieweeRole;
-  memberId?:    string;           // links back to Member.id when reviewer picks from roster
+  memberId?:    string;
   review:       string;
   plannedAction: string;
   createdAt:    string;
+  actionCompleted?:   boolean;  // has the planned action been acted on?
+  actionCompletedAt?:  string;  // ISO date when action was marked complete
 }

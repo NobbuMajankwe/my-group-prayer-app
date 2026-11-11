@@ -16,6 +16,7 @@ interface EntryListProps {
   onViewChange: (mode: ViewMode) => void;
   onEdit: (entry: ReviewEntry) => void;
   onDelete: (entry: ReviewEntry) => void;
+  onToggleAction: (entry: ReviewEntry) => void;
 }
 
 const VIEWS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
@@ -24,7 +25,7 @@ const VIEWS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   { mode: 'grid', icon: <GridViewOutlinedIcon   sx={{ fontSize: 18 }} />,  label: 'Grid view'  },
 ];
 
-export default function EntryList({ entries, viewMode, onViewChange, onEdit, onDelete }: EntryListProps) {
+export default function EntryList({ entries, viewMode, onViewChange, onEdit, onDelete, onToggleAction }: EntryListProps) {
   return (
     <Box>
       {/* Section heading */}
@@ -108,7 +109,7 @@ export default function EntryList({ entries, viewMode, onViewChange, onEdit, onD
         /* ── Single-column card view ─────────────────────── */
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
+            <EntryCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} onToggleAction={onToggleAction} />
           ))}
         </Box>
 
@@ -127,7 +128,7 @@ export default function EntryList({ entries, viewMode, onViewChange, onEdit, onD
           }}
         >
           {entries.map((entry) => (
-            <EntryGridCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
+            <EntryGridCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} onToggleAction={onToggleAction} />
           ))}
         </Box>
 
@@ -162,6 +163,7 @@ export default function EntryList({ entries, viewMode, onViewChange, onEdit, onD
               isLast={i === entries.length - 1}
               onEdit={onEdit}
               onDelete={onDelete}
+              onToggleAction={onToggleAction}
             />
           ))}
         </Card>

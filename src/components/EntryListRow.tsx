@@ -15,6 +15,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import type { ReviewEntry, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
 
 const LEADER_COLOURS: Record<LeaderRole, { bg: string; border: string; color: string }> = {
@@ -33,9 +35,10 @@ interface EntryListRowProps {
   isLast: boolean;
   onEdit: (entry: ReviewEntry) => void;
   onDelete: (entry: ReviewEntry) => void;
+  onToggleAction: (entry: ReviewEntry) => void;
 }
 
-export default function EntryListRow({ entry, index, isLast, onEdit, onDelete }: EntryListRowProps) {
+export default function EntryListRow({ entry, index, isLast, onEdit, onDelete, onToggleAction }: EntryListRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   const dateLabel = new Date(entry.createdAt).toLocaleDateString('en-GB', {
@@ -182,6 +185,31 @@ export default function EntryListRow({ entry, index, isLast, onEdit, onDelete }:
             <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.75 }}>
               {entry.plannedAction}
             </Typography>
+          </Box>
+          {/* Action toggle */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
+            <Chip
+              onClick={() => onToggleAction(entry)}
+              icon={entry.actionCompleted
+                ? <CheckCircleIcon sx={{ fontSize: '14px !important', color: '#15803d !important' }} />
+                : <RadioButtonUncheckedIcon sx={{ fontSize: '14px !important', color: '#b91c1c !important' }} />}
+              label={entry.actionCompleted ? 'Action completed' : 'Mark action as done'}
+              clickable
+              size="small"
+              sx={{
+                height: 22, fontSize: '0.65rem', fontWeight: 700,
+                bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.1)' : 'transparent',
+                color:   entry.actionCompleted ? '#15803d' : '#b91c1c',
+                border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.25)' : 'rgba(220,38,38,0.2)'}`,
+                cursor: 'pointer',
+                '&:hover': { bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.15)' : 'rgba(220,38,38,0.06)' },
+              }}
+            />
+            {entry.actionCompleted && entry.actionCompletedAt && (
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                {new Date(entry.actionCompletedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </Typography>
+            )}
           </Box>
         </Box>
       </Collapse>

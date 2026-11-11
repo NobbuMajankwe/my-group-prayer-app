@@ -16,6 +16,8 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import type { ReviewEntry, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
 
 const PURPLE = '#7c3aed';
@@ -41,9 +43,10 @@ interface EntryGridCardProps {
   entry: ReviewEntry;
   onEdit: (entry: ReviewEntry) => void;
   onDelete: (entry: ReviewEntry) => void;
+  onToggleAction: (entry: ReviewEntry) => void;
 }
 
-export default function EntryGridCard({ entry, onEdit, onDelete }: EntryGridCardProps) {
+export default function EntryGridCard({ entry, onEdit, onDelete, onToggleAction }: EntryGridCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const dateLabel = new Date(entry.createdAt).toLocaleDateString('en-GB', {
@@ -173,6 +176,27 @@ export default function EntryGridCard({ entry, onEdit, onDelete }: EntryGridCard
           <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.7, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
             {expanded ? entry.plannedAction : clamp(entry.plannedAction, PREVIEW_CHARS)}
           </Typography>
+
+          {/* Action status toggle */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+            <Chip
+              onClick={() => onToggleAction(entry)}
+              icon={entry.actionCompleted
+                ? <CheckCircleIcon sx={{ fontSize: '12px !important', color: '#15803d !important' }} />
+                : <RadioButtonUncheckedIcon sx={{ fontSize: '12px !important', color: '#b91c1c !important' }} />}
+              label={entry.actionCompleted ? 'Done' : 'Mark done'}
+              clickable
+              size="small"
+              sx={{
+                height: 20, fontSize: '0.6rem', fontWeight: 700,
+                bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.1)' : 'transparent',
+                color:   entry.actionCompleted ? '#15803d' : '#b91c1c',
+                border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.25)' : 'rgba(220,38,38,0.2)'}`,
+                cursor: 'pointer',
+                '&:hover': { bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.15)' : 'rgba(220,38,38,0.06)' },
+              }}
+            />
+          </Box>
         </Box>
 
         {/* Expand / collapse toggle */}
