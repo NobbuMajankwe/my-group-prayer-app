@@ -7,16 +7,20 @@ import {
 } from '@mui/material';
 
 import type { ReviewEntry, LeaderPerson, Member } from './types/ReviewEntry';
-import type { AuditEntry }               from './types/AuditLog';
+import type { AuditEntry }                        from './types/AuditLog';
 
 import {
-  loadEntries,        saveEntries,
-  loadLeaders,        saveLeaders,
-  loadMembers,        saveMembers,
-  loadAuditLog,       appendAuditEntry,  clearAuditLog,
-  saveSnoozeForLeader, getSnoozeUntil,
+  loadLeaders,   saveLeaders,
+  loadMembers,   saveMembers,
+  loadAuditLog,  clearAuditLog,
   clearLegacyPin,
 } from './utils/storage';
+import {
+  dbLoadLeaders, dbSaveLeaders,
+  dbLoadMembers, dbSaveMembers,
+  dbLoadEntries, dbSaveEntry,   dbDeleteEntry,
+  dbAppendAudit, initAmplify,
+} from './utils/db';
 
 import Header              from './components/Header';
 import EntryForm           from './components/EntryForm';
@@ -34,7 +38,14 @@ import ProfileDialog       from './components/ProfileDialog';
 import AuditLogDrawer      from './components/AuditLogDrawer';
 import ReminderBanner      from './components/ReminderBanner';
 import { getReminders }    from './components/ReminderBanner';
+import NotificationPrompt  from './components/NotificationPrompt';
 import MembersDialog       from './components/MembersDialog';
+import {
+  checkAndShowReminder,
+  requestNotificationPermission,
+  notificationsGranted,
+  snoozeReminder,
+} from './utils/reminders';
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 
@@ -152,13 +163,6 @@ function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
   });
 }
 
-// Whether we should show the reminder banner for this leader right now
-function shouldShowReminder(leaderName: string): boolean {
-  const until = getSnoozeUntil(leaderName);
-  if (!until) return true;                    // never snoozed
-  return new Date() > until;                  // snooze has expired
-}
-
 // ── Auth state ─────────────────────────────────────────────────────────────
 
 type AuthState = 'leader_setup' | 'login' | 'app';
@@ -167,14 +171,24 @@ type SnackbarState = { open: boolean; message: string; severity: 'success' | 'er
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function App() {
-  // Clean up any old single-PIN key from the previous auth model
-  useEffect(() => { clearLegacyPin(); }, []);
+  // Init Amplify + clean up legacy PIN on first render
+  useEffect(() => {
+    initAmplify();
+    clearLegacyPin();
+  }, []);
 
-  // ── Persistent state ──────────────────────────────────────────────────
+  // ── Persistent state — load from DB (falls back to localStorage) ──────
   const [leaders,  setLeaders]  = useState<LeaderPerson[]>(loadLeaders);
   const [members,  setMembers]  = useState<Member[]>(loadMembers);
-  const [entries,  setEntries]  = useState<ReviewEntry[]>(loadEntries);
+  const [entries,  setEntries]  = useState<ReviewEntry[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(loadAuditLog);
+
+  // Load cloud data on mount
+  useEffect(() => {
+    dbLoadLeaders().then(setLeaders);
+    dbLoadMembers().then(setMembers);
+    dbLoadEntries().then(setEntries);
+  }, []);
 
   // ── Auth state ────────────────────────────────────────────────────────
   const [authState,      setAuthState]      = useState<AuthState>(() =>
@@ -182,6 +196,7 @@ export default function App() {
   );
   const [currentLeader,  setCurrentLeader]  = useState<LeaderPerson | null>(null);
   const [showReminder,   setShowReminder]   = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
 
   // ── UI state ──────────────────────────────────────────────────────────
   const [editLeadersOpen, setEditLeadersOpen] = useState(false);
@@ -215,8 +230,9 @@ export default function App() {
     description: string,
     leaderName?: string,
   ) => {
-    const entry = appendAuditEntry(action, description, leaderName);
-    setAuditLog((prev) => [entry, ...prev].slice(0, 500));
+    dbAppendAudit(action, description, leaderName).then((entry) => {
+      setAuditLog((prev) => [entry, ...prev].slice(0, 500));
+    });
   };
 
   // ── Auth handlers ─────────────────────────────────────────────────────
@@ -224,6 +240,7 @@ export default function App() {
   const handleLeaderSetupComplete = (newLeaders: LeaderPerson[]) => {
     saveLeaders(newLeaders);
     setLeaders(newLeaders);
+    dbSaveLeaders(newLeaders);
     addLog('leaders_updated', `Team set up with ${newLeaders.length} member(s).`);
     setAuthState('login');
   };
@@ -232,8 +249,16 @@ export default function App() {
     setCurrentLeader(leader);
     setAuthState('app');
     addLog('login', `${leader.displayName || leader.name} logged in.`, leader.name);
-    // Check if reminder banner should appear
-    if (shouldShowReminder(leader.name)) setShowReminder(true);
+
+    // Ask for notification permission if not yet decided
+    if ('Notification' in window && Notification.permission === 'default') {
+      setShowNotifPrompt(true);
+    }
+
+    // Check reminders — will try push notification first, fall back to banner
+    checkAndShowReminder(leader.name, entries).then(({ showBanner }) => {
+      if (showBanner) setShowReminder(true);
+    });
   };
 
   const handleLogout = () => {
@@ -252,16 +277,27 @@ export default function App() {
 
   const handleSnoozeReminder = () => {
     if (!currentLeader) return;
-    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    saveSnoozeForLeader(currentLeader.name, nextWeek);
+    const until = snoozeReminder(currentLeader.name);
     addLog('reminder_snoozed',
-      `${currentLeader.displayName || currentLeader.name} snoozed action plan reminders until ${nextWeek.toLocaleDateString('en-GB')}.`,
+      `${currentLeader.displayName || currentLeader.name} snoozed action plan reminders until ${until.toLocaleDateString('en-GB')}.`,
       currentLeader.name);
     setShowReminder(false);
     showSnackbar("We'll remind you again next week.");
   };
 
   const handleDismissReminder = () => setShowReminder(false);
+
+  // ── Notification permission handlers ──────────────────────────────────
+
+  const handleAllowNotifications = async () => {
+    await requestNotificationPermission();
+    setShowNotifPrompt(false);
+    if (notificationsGranted()) {
+      showSnackbar('Weekly reminders enabled — you\'ll get a notification every week.');
+    }
+  };
+
+  const handleDismissNotifPrompt = () => setShowNotifPrompt(false);
 
   // ── Profile handlers ──────────────────────────────────────────────────
 
@@ -288,7 +324,7 @@ export default function App() {
   const handleEditLeadersSave = (updated: LeaderPerson[]) => {
     saveLeaders(updated);
     setLeaders(updated);
-    // Keep currentLeader in sync if their record changed
+    dbSaveLeaders(updated);
     if (currentLeader) {
       const refreshed = updated.find((l) => l.name === currentLeader.name);
       if (refreshed) setCurrentLeader(refreshed);
@@ -305,6 +341,7 @@ export default function App() {
   const handleMembersSave = (updated: Member[]) => {
     saveMembers(updated);
     setMembers(updated);
+    dbSaveMembers(updated);
     setMembersOpen(false);
     addLog(
       'leaders_updated',
@@ -331,7 +368,7 @@ export default function App() {
     };
     const updated = [entry, ...entries];
     setEntries(updated);
-    saveEntries(updated);
+    dbSaveEntry(entry);
     addLog('entry_added',
       `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
       currentLeader?.name);
@@ -341,21 +378,19 @@ export default function App() {
   const handleEditEntry = (values: EntryFormValues) => {
     if (!editingEntry) return;
     const reviewer = leaders.find((l) => l.name === values.leaderName);
-    const updated = entries.map((e) =>
-      e.id === editingEntry.id
-        ? { ...e,
-            leaderName:    values.leaderName,
-            leaderRole:    reviewer?.role ?? e.leaderRole,
-            revieweeName:  values.revieweeName.trim(),
-            revieweeRole:  values.revieweeRole,
-            memberId:      values.memberId,
-            review:        values.review.trim(),
-            plannedAction: values.plannedAction.trim(),
-          }
-        : e
-    );
+    const updatedEntry: ReviewEntry = {
+      ...editingEntry,
+      leaderName:    values.leaderName,
+      leaderRole:    reviewer?.role ?? editingEntry.leaderRole,
+      revieweeName:  values.revieweeName.trim(),
+      revieweeRole:  values.revieweeRole,
+      memberId:      values.memberId,
+      review:        values.review.trim(),
+      plannedAction: values.plannedAction.trim(),
+    };
+    const updated = entries.map((e) => e.id === editingEntry.id ? updatedEntry : e);
     setEntries(updated);
-    saveEntries(updated);
+    dbSaveEntry(updatedEntry);
     setEditingEntry(null);
     addLog('entry_edited',
       `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
@@ -376,7 +411,7 @@ export default function App() {
     const name = deleteTarget.revieweeName ?? (deleteTarget as any).name;
     const updated = entries.filter((e) => e.id !== deleteTarget.id);
     setEntries(updated);
-    saveEntries(updated);
+    dbDeleteEntry(deleteTarget.id);
     setDeleteTarget(null);
     addLog('entry_deleted', `Entry for "${name}" was deleted.`, currentLeader?.name);
     showSnackbar('Entry deleted.');
@@ -445,6 +480,15 @@ export default function App() {
             onProfile={() => setProfileOpen(true)}
             onLogout={handleLogout}
           />
+
+          {/* Notification permission prompt */}
+          {showNotifPrompt && (
+            <NotificationPrompt
+              leaderName={currentLeader.displayName || currentLeader.name}
+              onAllow={handleAllowNotifications}
+              onDismiss={handleDismissNotifPrompt}
+            />
+          )}
 
           {/* Weekly action-plan reminder banner */}
           {showReminder && reminderItems.length > 0 && (
