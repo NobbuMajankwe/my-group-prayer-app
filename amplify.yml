@@ -9,7 +9,7 @@ backend:
     build:
       commands:
         - npm install -g @aws-amplify/backend-cli --force
-        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        #- npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 
 frontend:
   phases:
