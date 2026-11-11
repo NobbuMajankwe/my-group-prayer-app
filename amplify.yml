@@ -1,14 +1,16 @@
 version: 1
 
 # PrayTogether — Amplify Gen 2 build spec
-# Frontend: Vite + React + TypeScript
-# Backend:  Amplify Gen 2 (AppSync + DynamoDB) in amplify/
+# Frontend: Vite + React + TypeScript  (node_modules from root package.json)
+# Backend:  Amplify Gen 2 AppSync + DynamoDB  (installed separately here)
 
 backend:
   phases:
     build:
       commands:
-        - npm ci --include=dev
+        # Install backend tooling separately — NOT in the frontend package.json
+        # This avoids the @opentelemetry lock-file conflict
+        - npm install -g @aws-amplify/backend-cli
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 
 frontend:
