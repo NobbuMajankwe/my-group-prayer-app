@@ -23,3 +23,7 @@ frontend:
     baseDirectory: dist
     files:
       - '**/*'
+  cache:
+    paths:
+      - .npm/**/*
+      - node_modules/**/*
