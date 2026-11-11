@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/backend": "^1.25.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.4.0",
@@ -24,7 +25,6 @@
     "uuid": "^14.0.2"
   },
   "devDependencies": {
-    "@aws-amplify/backend": "^1.25.1",
     "@eslint/js": "^9.39.5",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

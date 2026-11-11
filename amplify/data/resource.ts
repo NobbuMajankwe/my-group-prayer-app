@@ -31,14 +31,16 @@ const schema = a.schema({
 
   ReviewEntry: a
     .model({
-      leaderName:    a.string().required(),
-      leaderRole:    a.enum(['leader', 'core']),
-      revieweeName:  a.string().required(),
-      revieweeRole:  a.enum(['member', 'core']),
-      memberId:      a.string(),
-      review:        a.string().required(),
-      plannedAction: a.string().required(),
-      createdAt:     a.string().required(),
+      leaderName:          a.string().required(),
+      leaderRole:          a.enum(['leader', 'core']),
+      revieweeName:        a.string().required(),
+      revieweeRole:        a.enum(['member', 'core']),
+      memberId:            a.string(),
+      review:              a.string().required(),
+      plannedAction:       a.string().required(),
+      createdAt:           a.string().required(),
+      actionCompleted:     a.boolean().default(false),
+      actionCompletedAt:   a.string(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 
