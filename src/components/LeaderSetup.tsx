@@ -81,7 +81,7 @@ export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
       if (!trimmedName) continue;
       if (leaders.some((l) => l.name.toLowerCase() === trimmedName.toLowerCase())) continue;
       const hash = pw.length >= 4 ? await hashPin(pw) : '';
-      toAdd.push({ name: trimmedName, role, passwordHash: hash });
+      toAdd.push({ id: crypto.randomUUID(), name: trimmedName, role, passwordHash: hash });
     }
     if (toAdd.length > 0) {
       setLeaders((p) => [...p, ...toAdd].slice(0, MAX_LEADERS));

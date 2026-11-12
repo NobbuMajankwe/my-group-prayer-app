@@ -33,10 +33,10 @@ export const loadLeaders = (): LeaderPerson[] => {
     const parsed = JSON.parse(raw) as Array<LeaderPerson | string>;
     return parsed.map((item) => {
       if (typeof item === 'string') {
-        return { name: item, role: 'leader' as const, passwordHash: '' };
+        return { id: crypto.randomUUID(), name: item, role: 'leader' as const, passwordHash: '' };
       }
-      // Ensure passwordHash exists on older records
-      return { ...item, passwordHash: item.passwordHash ?? '' };
+      // Ensure id and passwordHash exist on older records
+      return { ...item, id: item.id ?? crypto.randomUUID(), passwordHash: item.passwordHash ?? '' };
     });
   } catch { return []; }
 };
