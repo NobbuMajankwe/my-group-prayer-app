@@ -273,7 +273,7 @@ export default function ReviewStatusDashboard({
                       <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.6 }}>
                         {lastReview.plannedAction}
                       </Typography>
-                      {lastReview.leaderName !== currentLeader.name && (
+                      {lastReview.leaderId !== currentLeader.id && (
                         <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
                           Reviewed by {lastReview.leaderName}
                         </Typography>

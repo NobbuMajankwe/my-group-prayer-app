@@ -19,7 +19,7 @@ import AiActionSuggest from './AiActionSuggest';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 
 export interface EntryFormValues {
-  leaderName:     string;
+  leaderId:       string;
   revieweeName:   string;
   revieweeRole:   RevieweeRole;
   prayerRequest:  string;
@@ -41,7 +41,7 @@ interface EntryFormProps {
 type NameOption = { label: string; memberId: string; core: string | undefined };
 
 const EMPTY: EntryFormValues = {
-  leaderName: '', revieweeName: '', revieweeRole: 'member',
+  leaderId: '', revieweeName: '', revieweeRole: 'member',
   prayerRequest: '', plannedAction: '', memberId: undefined, chatInitiated: false,
 };
 
@@ -74,9 +74,9 @@ export default function EntryForm({
   }, [currentLeader.id, isLeader, revieweeRole, members, leaders]);
 
   useEffect(() => {
-    setValue('leaderName', currentLeader.name);
+    setValue('leaderId', currentLeader.id);
     if (!isLeader) setValue('revieweeRole', 'member');
-  }, [currentLeader.name, isLeader, setValue]);
+  }, [currentLeader.id, isLeader, setValue]);
 
   useEffect(() => {
     if (!editingEntry) { setValue('revieweeName', ''); setValue('memberId', undefined); }
@@ -85,7 +85,7 @@ export default function EntryForm({
   useEffect(() => {
     if (editingEntry) {
       reset({
-        leaderName:    editingEntry.leaderName,
+        leaderId:      editingEntry.leaderId ?? currentLeader.id,
         revieweeName:  editingEntry.revieweeName,
         revieweeRole:  editingEntry.revieweeRole,
         prayerRequest: editingEntry.prayerRequest,
@@ -94,13 +94,13 @@ export default function EntryForm({
         chatInitiated: editingEntry.chatInitiated ?? false,
       });
     } else {
-      reset({ ...EMPTY, leaderName: currentLeader.name });
+      reset({ ...EMPTY, leaderId: currentLeader.id });
     }
-  }, [editingEntry, reset, currentLeader.name]);
+  }, [editingEntry, reset, currentLeader.id]);
 
   const handleFormSubmit = (values: EntryFormValues) => {
     onSubmit(values);
-    if (!editingEntry) reset({ ...EMPTY, leaderName: currentLeader.name });
+    if (!editingEntry) reset({ ...EMPTY, leaderId: currentLeader.id });
   };
 
   const isEditing = Boolean(editingEntry);

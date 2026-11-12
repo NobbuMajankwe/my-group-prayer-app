@@ -97,16 +97,16 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
     }
   };
 
-  const handleRoleToggle = (name: string, newRole: LeaderRole) =>
-    setLeaders((p) => p.map((l) => l.name === name
+  const handleRoleToggle = (id: string, newRole: LeaderRole) =>
+    setLeaders((p) => p.map((l) => l.id === id
       ? { ...l, role: newRole, assignedLeader: newRole === 'leader' ? undefined : l.assignedLeader }
       : l));
 
-  const handleAssignLeader = (coreName: string, leaderId: string) =>
-    setLeaders((p) => p.map((l) => l.name === coreName ? { ...l, assignedLeader: leaderId || undefined } : l));
+  const handleAssignLeader = (coreId: string, leaderId: string) =>
+    setLeaders((p) => p.map((l) => l.id === coreId ? { ...l, assignedLeader: leaderId || undefined } : l));
 
-  const handleRemove = (name: string) =>
-    setLeaders((p) => p.filter((l) => l.name !== name));
+  const handleRemove = (id: string) =>
+    setLeaders((p) => p.filter((l) => l.id !== id));
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -213,7 +213,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
               const c = ROLE_COLOURS[person.role];
               const hasPassword = Boolean(person.passwordHash);
               return (
-                <Box key={person.name} sx={{ display: 'flex', alignItems: 'center', gap: 1,
+                <Box key={person.id} sx={{ display: 'flex', alignItems: 'center', gap: 1,
                   px: 1.5, py: 0.875, borderRadius: 2.5,
                   bgcolor: alpha('#7c3aed', 0.03),
                   border: '1px solid', borderColor: alpha('#7c3aed', 0.1) }}>
@@ -228,7 +228,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
 
                   {/* Inline role toggle */}
                   <ToggleButtonGroup value={person.role} exclusive size="small"
-                    onChange={(_, v) => { if (v) handleRoleToggle(person.name, v as LeaderRole); }}
+                    onChange={(_, v) => { if (v) handleRoleToggle(person.id, v as LeaderRole); }}
                     sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 600,
                       fontSize: '0.7rem', py: 0.25, px: 0.875, lineHeight: 1.4,
                       border: `1px solid ${alpha('#7c3aed', 0.15)}` } }}>
@@ -241,7 +241,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                       size="small"
                       displayEmpty
                       value={person.assignedLeader ?? ''}
-                      onChange={(e) => handleAssignLeader(person.name, e.target.value)}
+                      onChange={(e) => handleAssignLeader(person.id, e.target.value)}
                       sx={{ fontSize: '0.72rem', minWidth: 110, height: 28,
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha('#eab308', 0.4) } }}
                     >
@@ -259,7 +259,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                       border: `1px solid ${c.border}`, display: { xs: 'none', sm: 'flex' },
                       height: 20, fontSize: '0.65rem' }} />
 
-                  <IconButton size="small" onClick={() => handleRemove(person.name)}
+                  <IconButton size="small" onClick={() => handleRemove(person.id)}
                     sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
                     <CloseIcon sx={{ fontSize: 15 }} />
                   </IconButton>

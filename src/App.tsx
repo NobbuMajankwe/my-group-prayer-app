@@ -180,7 +180,7 @@ function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
       const action  = (e.plannedAction ?? '').toLowerCase();
       if (!name.includes(q) && !request.includes(q) && !action.includes(q)) return false;
     }
-    if (f.reviewer     && e.leaderName   !== f.reviewer)     return false;
+    if (f.reviewer     && e.leaderId !== f.reviewer)     return false;
     if (f.leaderRole   && e.leaderRole   !== f.leaderRole)   return false;
     if (f.revieweeRole && e.revieweeRole !== f.revieweeRole) return false;
     if (f.week) {
@@ -368,13 +368,13 @@ export default function App() {
   // ── Profile handlers ──────────────────────────────────────────────────
 
   const handleProfileSave = (updated: LeaderPerson) => {
-    const updatedLeaders = leaders.map((l) => l.name === updated.name ? updated : l);
+    const updatedLeaders = leaders.map((l) => l.id === updated.id ? updated : l);
     setSaving(true);
     dbSaveLeaders(updatedLeaders).then(() => {
       setLeaders(updatedLeaders);
       setCurrentLeader(updated);
 
-      const prev = leaders.find((l) => l.name === updated.name);
+      const prev = leaders.find((l) => l.id === updated.id);
       if (prev?.passwordHash !== updated.passwordHash) {
         addLog('password_changed', `${updated.displayName || updated.name} changed their password.`, updated.name);
         showSnackbar('Password changed successfully.');
@@ -393,7 +393,7 @@ export default function App() {
     dbSaveLeaders(updated).then(() => {
       setLeaders(updated);
       if (currentLeader) {
-        const refreshed = updated.find((l) => l.name === currentLeader.name);
+        const refreshed = updated.find((l) => l.id === currentLeader.id);
         if (refreshed) setCurrentLeader(refreshed);
       }
       setEditLeadersOpen(false);
@@ -423,12 +423,12 @@ export default function App() {
   // ── Entry handlers ────────────────────────────────────────────────────
 
   const handleAddEntry = (values: EntryFormValues) => {
-    const reviewer = leaders.find((l) => l.name === values.leaderName);
+    const reviewer = leaders.find((l) => l.id === values.leaderId);
     const now = new Date().toISOString();
     const entry: ReviewEntry = {
       id:             uuidv4(),
-      leaderId:       reviewer?.id,
-      leaderName:     values.leaderName,
+      leaderId:       reviewer?.id ?? values.leaderId,
+      leaderName:     reviewer ? (reviewer.displayName || reviewer.name) : '',
       leaderRole:     reviewer?.role ?? 'core',
       revieweeName:   values.revieweeName.trim(),
       revieweeRole:   values.revieweeRole,
@@ -452,11 +452,11 @@ export default function App() {
 
   const handleEditEntry = (values: EntryFormValues) => {
     if (!editingEntry) return;
-    const reviewer = leaders.find((l) => l.name === values.leaderName);
+    const reviewer = leaders.find((l) => l.id === values.leaderId);
     const updatedEntry: ReviewEntry = {
       ...editingEntry,
       leaderId:      reviewer?.id ?? editingEntry.leaderId,
-      leaderName:    values.leaderName,
+      leaderName:    reviewer ? (reviewer.displayName || reviewer.name) : editingEntry.leaderName,
       leaderRole:    reviewer?.role ?? editingEntry.leaderRole,
       revieweeName:  values.revieweeName.trim(),
       revieweeRole:  values.revieweeRole,
@@ -473,7 +473,7 @@ export default function App() {
       setEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updatedEntry : e));
       setEditingEntry(null);
       addLog('entry_edited',
-        `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
+        `Entry for "${values.revieweeName.trim()}" updated by ${reviewer ? (reviewer.displayName || reviewer.name) : ''}.`,
         currentLeader?.name);
       showSnackbar('Entry updated successfully.');
     }).finally(() => setSaving(false));

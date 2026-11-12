@@ -228,9 +228,9 @@ export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
                   const c = ROLE_COLOURS[l.role];
                   return (
                     <Chip
-                      key={l.name} size="small"
+                      key={l.id} size="small"
                       label={`${l.name} · ${l.role === 'leader' ? 'Leader' : 'Core'}`}
-                      onDelete={() => setLeaders((p) => p.filter((x) => x.name !== l.name))}
+                      onDelete={() => setLeaders((p) => p.filter((x) => x.id !== l.id))}
                       deleteIcon={<CloseIcon sx={{ fontSize: '13px !important' }} />}
                       sx={{ bgcolor: c.bg, color: c.color, fontWeight: 600, border: '1px solid', borderColor: c.border }}
                     />
@@ -262,7 +262,7 @@ export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
               {leaders.map((l) => {
                 const c = ROLE_COLOURS[l.role];
                 return (
-                  <Box key={l.name} sx={{
+                  <Box key={l.id} sx={{
                     display: 'flex', alignItems: 'center', gap: 1,
                     px: 1.5, py: 1, borderRadius: 2.5,
                     bgcolor: alpha('#7c3aed', 0.03),
@@ -275,7 +275,7 @@ export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
                       sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: c.bg, color: c.color, border: `1px solid ${c.border}` }}
                     />
                     <IconButton size="small"
-                      onClick={() => setLeaders((p) => p.filter((x) => x.name !== l.name))}
+                      onClick={() => setLeaders((p) => p.filter((x) => x.id !== l.id))}
                       sx={{ color: 'text.disabled' }}>
                       <CloseIcon sx={{ fontSize: 14 }} />
                     </IconButton>

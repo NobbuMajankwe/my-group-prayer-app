@@ -173,7 +173,7 @@ export default function FilterBar({
           >
             <MenuItem value=""><em>All</em></MenuItem>
             {leaders.map((l) => (
-              <MenuItem key={l.name} value={l.name}>{l.name}</MenuItem>
+              <MenuItem key={l.id} value={l.id}>{l.displayName || l.name}</MenuItem>
             ))}
           </Select>
         </FormControl>

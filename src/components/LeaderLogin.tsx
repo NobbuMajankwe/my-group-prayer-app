@@ -152,7 +152,7 @@ export default function LeaderLogin({ leaders, onSuccess }: LeaderLoginProps) {
                 const rc = ROLE_COLOURS[l.role];
                 return (
                   <Box
-                    key={l.name}
+                    key={l.id}
                     onClick={() => handleSelect(l)}
                     sx={{
                       display: 'flex', alignItems: 'center', gap: 1.5,

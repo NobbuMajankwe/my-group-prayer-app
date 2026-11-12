@@ -6,7 +6,7 @@ const STORAGE_KEY   = 'review-action-tracker';
 const LEADERS_KEY   = 'review-action-tracker-leaders';
 const MEMBERS_KEY   = 'review-action-tracker-members';
 const AUDIT_KEY     = 'review-action-tracker-audit';
-const SNOOZE_KEY    = 'review-action-tracker-snooze'; // leaderName → ISO date
+const SNOOZE_KEY    = 'review-action-tracker-snooze'; // leaderId → ISO date
 
 // ── Entries ────────────────────────────────────────────────────────────────
 
@@ -117,15 +117,15 @@ export const loadSnoozeMap = (): SnoozeMap => {
   } catch { return {}; }
 };
 
-export const saveSnoozeForLeader = (leaderName: string, until: Date): void => {
+export const saveSnoozeForLeader = (leaderId: string, until: Date): void => {
   const map = loadSnoozeMap();
-  map[leaderName] = until.toISOString();
+  map[leaderId] = until.toISOString();
   localStorage.setItem(SNOOZE_KEY, JSON.stringify(map));
 };
 
-export const getSnoozeUntil = (leaderName: string): Date | null => {
+export const getSnoozeUntil = (leaderId: string): Date | null => {
   const map = loadSnoozeMap();
-  const raw = map[leaderName];
+  const raw = map[leaderId];
   return raw ? new Date(raw) : null;
 };
 
