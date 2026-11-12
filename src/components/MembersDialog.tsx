@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/immutability */
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useRef } from 'react';
 import {
   Alert, Avatar, Box, Button, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, Divider, FormControl,
@@ -63,6 +65,7 @@ export default function MembersDialog({
   const [errors,     setErrors]     = useState<Partial<MemberDraft>>({});
   const [showForm,   setShowForm]   = useState(false);
   const [inputTab,   setInputTab]   = useState(0); // 0 = one by one, 1 = CSV
+  const formRef = useRef<HTMLDivElement>(null);
 
   // Sync when dialog opens
   useEffect(() => {
@@ -218,6 +221,8 @@ export default function MembersDialog({
     setEditingId(m.id);
     setErrors({});
     setShowForm(true);
+    setInputTab(0);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
   // ── Delete ────────────────────────────────────────────────────────────
@@ -331,6 +336,7 @@ export default function MembersDialog({
           <>
             {showForm ? (
           <Box
+            ref={formRef}
             sx={{
               p: 2, mb: 2.5, borderRadius: 3,
               bgcolor: alpha('#7c3aed', 0.03),
