@@ -58,15 +58,17 @@ const schema = a.schema({
 
   // ── Amplify AI routes ──────────────────────────────────────────────────
 
-  // Feature 1: conversational follow-up action suggester (used in EntryForm)
+  // Feature 1: one-shot follow-up action suggester (used in EntryForm)
   PrayerAssistant: a
-    .conversation({
+    .generation({
       aiModel: a.ai.model('Claude 3 Haiku'),
       systemPrompt:
         'You are a pastoral care assistant for a small group leader. ' +
         'Given a prayer request, suggest one brief, warm, practical follow-up action ' +
         'the leader can take. Reply with 1-2 sentences only — no preamble, no bullet points.',
     })
+    .arguments({ prayerRequest: a.string().required() })
+    .returns(a.customType({ action: a.string() }))
     .authorization((allow) => [allow.publicApiKey()]),
 
   // Feature 2: one-shot summary of all prayer requests for a leader (used in ReviewStatusDashboard)

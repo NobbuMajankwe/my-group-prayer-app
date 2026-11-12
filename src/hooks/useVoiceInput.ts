@@ -7,19 +7,18 @@ interface UseVoiceInputOptions {
   append?: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SR: any = typeof window !== 'undefined'
+  ? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null)
+  : null;
+
 export function useVoiceInput({ onResult, append = true }: UseVoiceInputOptions) {
-  const [state, setState] = useState<VoiceState>(() =>
-    typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
-      ? 'idle'
-      : 'unsupported',
-  );
-  const recogRef = useRef<SpeechRecognition | null>(null);
+  const [state, setState] = useState<VoiceState>(SR ? 'idle' : 'unsupported');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recogRef = useRef<any>(null);
 
   const start = useCallback((currentValue = '') => {
-    if (state === 'unsupported') return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SR: typeof SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SR) return;
     const recog = new SR();
     recog.lang = 'en-US';
     recog.interimResults = false;
@@ -27,13 +26,14 @@ export function useVoiceInput({ onResult, append = true }: UseVoiceInputOptions)
     recog.onstart  = () => setState('listening');
     recog.onend    = () => setState('idle');
     recog.onerror  = () => setState('idle');
-    recog.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recog.onresult = (e: any) => {
+      const transcript: string = e.results[0][0].transcript;
       onResult(append && currentValue.trim() ? `${currentValue.trimEnd()} ${transcript}` : transcript);
     };
     recogRef.current = recog;
     recog.start();
-  }, [state, onResult, append]);
+  }, [onResult, append]);
 
   const stop = useCallback(() => recogRef.current?.stop(), []);
 

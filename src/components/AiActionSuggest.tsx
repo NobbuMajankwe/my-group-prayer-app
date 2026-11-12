@@ -22,22 +22,9 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
     setError('');
     setSuggestion('');
     try {
-      const { data, errors } = await client.conversations.PrayerAssistant.create({});
-      if (errors?.length || !data) throw new Error(errors?.[0]?.message ?? 'Failed to start conversation');
-
-      const conv = await client.conversations.PrayerAssistant.get({ id: data.id });
-      if (!conv.data) throw new Error('Could not retrieve conversation');
-
-      let result = '';
-      const stream = conv.data.sendMessage({
-        content: [{ text: `Prayer request: ${prayerRequest}` }],
-      });
-      for await (const chunk of stream) {
-        if (chunk.contentBlockDelta?.delta?.text) {
-          result += chunk.contentBlockDelta.delta.text;
-        }
-      }
-      setSuggestion(result.trim());
+      const { data, errors } = await client.generations.PrayerAssistant({ prayerRequest });
+      if (errors?.length) throw new Error(errors[0].message);
+      setSuggestion(data?.action ?? '');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'AI suggestion failed');
     } finally {
