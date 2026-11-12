@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Box, Button, CircularProgress, Typography, alpha } from '@mui/material';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import { generateClient } from 'aws-amplify/api';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { getAiClient, isAiAvailable } from '../utils/aiClient';
 
 interface AiActionSuggestProps {
   prayerRequest: string;
@@ -16,12 +13,15 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
 
+  if (!isAiAvailable()) return null;
+
   const handleSuggest = async () => {
     if (!prayerRequest.trim()) return;
     setLoading(true);
     setError('');
     setSuggestion('');
     try {
+      const client = getAiClient();
       const { data, errors } = await client.generations.PrayerAssistant({ prayerRequest });
       if (errors?.length) throw new Error(errors[0].message);
       setSuggestion(data?.action ?? '');
@@ -29,7 +29,7 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
       const msg = e instanceof Error ? e.message : '';
       setError(
         msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
-          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          ? 'AI is still initialising — try again in a moment.'
           : msg || 'AI suggestion failed',
       );
     } finally {

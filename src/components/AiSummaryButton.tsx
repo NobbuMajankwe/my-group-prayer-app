@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Box, Button, CircularProgress, IconButton, Typography, alpha } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloseIcon from '@mui/icons-material/Close';
-import { generateClient } from 'aws-amplify/api';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { getAiClient, isAiAvailable } from '../utils/aiClient';
 
 interface AiSummaryButtonProps {
   requests: string[]; // array of prayer request strings
@@ -16,12 +13,15 @@ export default function AiSummaryButton({ requests }: AiSummaryButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
 
+  if (!isAiAvailable()) return null;
+
   const handleSummarise = async () => {
     if (!requests.length) return;
     setLoading(true);
     setError('');
     setSummary('');
     try {
+      const client = getAiClient();
       const { data, errors } = await client.generations.PrayerSummary({
         requests: requests.join('\n\n'),
       });
@@ -31,7 +31,7 @@ export default function AiSummaryButton({ requests }: AiSummaryButtonProps) {
       const msg = e instanceof Error ? e.message : '';
       setError(
         msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
-          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          ? 'AI is still initialising — try again in a moment.'
           : msg || 'Summary failed',
       );
     } finally {

@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Box, Button, CircularProgress, Typography, alpha } from '@mui/material';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
-import { generateClient } from 'aws-amplify/api';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { getAiClient, isAiAvailable } from '../utils/aiClient';
 
 interface AiMemberNotesProps {
   memberName: string;
@@ -17,13 +14,14 @@ export default function AiMemberNotes({ memberName, recentRequests, onAccept }: 
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
 
-  if (!recentRequests.length) return null;
+  if (!isAiAvailable() || !recentRequests.length) return null;
 
   const handleSuggest = async () => {
     setLoading(true);
     setError('');
     setNote('');
     try {
+      const client = getAiClient();
       const { data, errors } = await client.generations.MemberNoteSuggestion({
         memberName,
         recentRequests: recentRequests.join('\n'),
@@ -34,7 +32,7 @@ export default function AiMemberNotes({ memberName, recentRequests, onAccept }: 
       const msg = e instanceof Error ? e.message : '';
       setError(
         msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
-          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          ? 'AI is still initialising — try again in a moment.'
           : msg || 'Suggestion failed',
       );
     } finally {
