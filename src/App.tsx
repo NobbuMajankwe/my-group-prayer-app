@@ -180,6 +180,7 @@ export default function App() {
   const [entries,  setEntries]  = useState<ReviewEntry[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
 
   // ── Auth state ────────────────────────────────────────────────────────
   const [authState,      setAuthState]      = useState<AuthState>('login');
@@ -248,11 +249,12 @@ export default function App() {
   // ── Auth handlers ─────────────────────────────────────────────────────
 
   const handleLeaderSetupComplete = (newLeaders: LeaderPerson[]) => {
+    setSaving(true);
     dbSaveLeaders(newLeaders).then(() => {
       setLeaders(newLeaders);
       addLog('leaders_updated', `Team set up with ${newLeaders.length} member(s).`);
       setAuthState('login');
-    });
+    }).finally(() => setSaving(false));
   };
 
   const handleLoginSuccess = (leader: LeaderPerson) => {
@@ -313,6 +315,7 @@ export default function App() {
 
   const handleProfileSave = (updated: LeaderPerson) => {
     const updatedLeaders = leaders.map((l) => l.name === updated.name ? updated : l);
+    setSaving(true);
     dbSaveLeaders(updatedLeaders).then(() => {
       setLeaders(updatedLeaders);
       setCurrentLeader(updated);
@@ -326,12 +329,13 @@ export default function App() {
           `${updated.name} updated their display name to "${updated.displayName}".`, updated.name);
         showSnackbar('Profile updated.');
       }
-    });
+    }).finally(() => setSaving(false));
   };
 
   // ── Leader management ─────────────────────────────────────────────────
 
   const handleEditLeadersSave = (updated: LeaderPerson[]) => {
+    setSaving(true);
     dbSaveLeaders(updated).then(() => {
       setLeaders(updated);
       if (currentLeader) {
@@ -343,12 +347,13 @@ export default function App() {
         `Team updated: ${updated.map((l) => `${l.name} (${l.role})`).join(', ')}.`,
         currentLeader?.name);
       showSnackbar('Team updated successfully.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   // ── Member management ─────────────────────────────────────────────────
 
   const handleMembersSave = (updated: Member[]) => {
+    setSaving(true);
     dbSaveMembers(updated).then(() => {
       setMembers(updated);
       setMembersOpen(false);
@@ -358,7 +363,7 @@ export default function App() {
         currentLeader?.name,
       );
       showSnackbar('Members saved successfully.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   // ── Entry handlers ────────────────────────────────────────────────────
@@ -376,13 +381,14 @@ export default function App() {
       plannedAction: values.plannedAction.trim(),
       createdAt:     new Date().toISOString(),
     };
+    setSaving(true);
     dbSaveEntry(entry).then(() => {
       setEntries((prev) => [entry, ...prev]);
       addLog('entry_added',
         `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
         currentLeader?.name);
       showSnackbar('Entry added successfully.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   const handleEditEntry = (values: EntryFormValues) => {
@@ -398,6 +404,7 @@ export default function App() {
       review:        values.review.trim(),
       plannedAction: values.plannedAction.trim(),
     };
+    setSaving(true);
     dbSaveEntry(updatedEntry).then(() => {
       setEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updatedEntry : e));
       setEditingEntry(null);
@@ -405,7 +412,7 @@ export default function App() {
         `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
         currentLeader?.name);
       showSnackbar('Entry updated successfully.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   const handleFormSubmit = (values: EntryFormValues) =>
@@ -417,6 +424,7 @@ export default function App() {
       actionCompleted:   !entry.actionCompleted,
       actionCompletedAt: !entry.actionCompleted ? new Date().toISOString() : undefined,
     };
+    setSaving(true);
     dbSaveEntry(toggled).then(() => {
       setEntries((prev) => prev.map((e) => e.id === entry.id ? toggled : e));
       addLog(
@@ -425,7 +433,7 @@ export default function App() {
         currentLeader?.name,
       );
       showSnackbar(toggled.actionCompleted ? 'Action marked as completed.' : 'Action marked as pending.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   const handleStartEdit = (entry: ReviewEntry) => {
@@ -436,12 +444,13 @@ export default function App() {
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
     const name = deleteTarget.revieweeName ?? (deleteTarget as any).name;
+    setSaving(true);
     dbDeleteEntry(deleteTarget.id).then(() => {
       setEntries((prev) => prev.filter((e) => e.id !== deleteTarget.id));
       setDeleteTarget(null);
       addLog('entry_deleted', `Entry for "${name}" was deleted.`, currentLeader?.name);
       showSnackbar('Entry deleted.');
-    });
+    }).finally(() => setSaving(false));
   };
 
   // ── View helpers ──────────────────────────────────────────────────────
@@ -474,7 +483,7 @@ export default function App() {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <LeaderSetup onComplete={handleLeaderSetupComplete} />
+        <LeaderSetup onComplete={handleLeaderSetupComplete} saving={saving} />
       </ThemeProvider>
     );
   }
