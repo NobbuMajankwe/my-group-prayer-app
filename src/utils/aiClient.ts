@@ -5,7 +5,7 @@
  * We create it lazily on first use so module-level imports don't fail.
  */
 
-import { generateClient } from 'aws-amplify/api';
+import { generateClient } from 'aws-amplify/data';
 import { Amplify }        from 'aws-amplify';
 import type { Schema }    from '../../amplify/data/resource';
 
