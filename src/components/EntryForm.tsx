@@ -55,7 +55,7 @@ const MEMBER_COL = '#5b21b6';
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function EntryForm({
-  leaders, members, currentLeader, onSubmit, editingEntry, onCancelEdit, saving,
+  /* leaders, */ members, currentLeader, onSubmit, editingEntry, onCancelEdit, saving,
 }: EntryFormProps) {
   const {
     register, handleSubmit, reset, control, setValue,
