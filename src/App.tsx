@@ -9,17 +9,13 @@ import {
 import type { ReviewEntry, LeaderPerson, Member } from './types/ReviewEntry';
 import type { AuditEntry }                        from './types/AuditLog';
 
+import { clearLegacyPin } from './utils/storage';
 import {
-  loadLeaders,   saveLeaders,
-  loadMembers,   saveMembers,
-  loadAuditLog,  clearAuditLog,
-  clearLegacyPin,
-} from './utils/storage';
-import {
-  dbLoadLeaders, dbSaveLeaders,
-  dbLoadMembers, dbSaveMembers,
-  dbLoadEntries, dbSaveEntry,   dbDeleteEntry,
-  dbAppendAudit, initAmplify,
+  dbLoadLeaders,  dbSaveLeaders,
+  dbLoadMembers,  dbSaveMembers,
+  dbLoadEntries,  dbSaveEntry,    dbDeleteEntry,
+  dbAppendAudit,  dbLoadAuditLog,
+  initAmplify,
 } from './utils/db';
 
 import Header              from './components/Header';
@@ -178,23 +174,35 @@ export default function App() {
     clearLegacyPin();
   }, []);
 
-  // ── Persistent state — load from DB (falls back to localStorage) ──────
-  const [leaders,  setLeaders]  = useState<LeaderPerson[]>(loadLeaders);
-  const [members,  setMembers]  = useState<Member[]>(loadMembers);
+  // ── State ─────────────────────────────────────────────────────────────
+  const [leaders,  setLeaders]  = useState<LeaderPerson[]>([]);
+  const [members,  setMembers]  = useState<Member[]>([]);
   const [entries,  setEntries]  = useState<ReviewEntry[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>(loadAuditLog);
-
-  // Load cloud data on mount
-  useEffect(() => {
-    dbLoadLeaders().then(setLeaders);
-    dbLoadMembers().then(setMembers);
-    dbLoadEntries().then(setEntries);
-  }, []);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [loading,  setLoading]  = useState(true);
 
   // ── Auth state ────────────────────────────────────────────────────────
-  const [authState,      setAuthState]      = useState<AuthState>(() =>
-    loadLeaders().length === 0 ? 'leader_setup' : 'login'
-  );
+  const [authState,      setAuthState]      = useState<AuthState>('login');
+
+  // Load all data from DynamoDB on mount, then determine auth gate
+  useEffect(() => {
+    Promise.all([
+      dbLoadLeaders(),
+      dbLoadMembers(),
+      dbLoadEntries(),
+      dbLoadAuditLog(),
+    ]).then(([l, m, e, a]) => {
+      setLeaders(l);
+      setMembers(m);
+      setEntries(e);
+      setAuditLog(a);
+      setAuthState(l.length === 0 ? 'leader_setup' : 'login');
+      setLoading(false);
+    }).catch((err) => {
+      console.error('[App] Failed to load from DB', err);
+      setLoading(false);
+    });
+  }, []);
   const [currentLeader,  setCurrentLeader]  = useState<LeaderPerson | null>(null);
   const [showReminder,   setShowReminder]   = useState(false);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
@@ -240,11 +248,11 @@ export default function App() {
   // ── Auth handlers ─────────────────────────────────────────────────────
 
   const handleLeaderSetupComplete = (newLeaders: LeaderPerson[]) => {
-    saveLeaders(newLeaders);
-    setLeaders(newLeaders);
-    dbSaveLeaders(newLeaders);
-    addLog('leaders_updated', `Team set up with ${newLeaders.length} member(s).`);
-    setAuthState('login');
+    dbSaveLeaders(newLeaders).then(() => {
+      setLeaders(newLeaders);
+      addLog('leaders_updated', `Team set up with ${newLeaders.length} member(s).`);
+      setAuthState('login');
+    });
   };
 
   const handleLoginSuccess = (leader: LeaderPerson) => {
@@ -305,53 +313,52 @@ export default function App() {
 
   const handleProfileSave = (updated: LeaderPerson) => {
     const updatedLeaders = leaders.map((l) => l.name === updated.name ? updated : l);
-    saveLeaders(updatedLeaders);
-    setLeaders(updatedLeaders);
-    setCurrentLeader(updated);
-    dbSaveLeaders(updatedLeaders); // sync password/displayName changes to cloud
+    dbSaveLeaders(updatedLeaders).then(() => {
+      setLeaders(updatedLeaders);
+      setCurrentLeader(updated);
 
-    // Detect what changed for the audit log
-    const prev = leaders.find((l) => l.name === updated.name);
-    if (prev?.passwordHash !== updated.passwordHash) {
-      addLog('password_changed', `${updated.displayName || updated.name} changed their password.`, updated.name);
-      showSnackbar('Password changed successfully.');
-    } else if (prev?.displayName !== updated.displayName) {
-      addLog('profile_updated',
-        `${updated.name} updated their display name to "${updated.displayName}".`, updated.name);
-      showSnackbar('Profile updated.');
-    }
+      const prev = leaders.find((l) => l.name === updated.name);
+      if (prev?.passwordHash !== updated.passwordHash) {
+        addLog('password_changed', `${updated.displayName || updated.name} changed their password.`, updated.name);
+        showSnackbar('Password changed successfully.');
+      } else if (prev?.displayName !== updated.displayName) {
+        addLog('profile_updated',
+          `${updated.name} updated their display name to "${updated.displayName}".`, updated.name);
+        showSnackbar('Profile updated.');
+      }
+    });
   };
 
   // ── Leader management ─────────────────────────────────────────────────
 
   const handleEditLeadersSave = (updated: LeaderPerson[]) => {
-    saveLeaders(updated);
-    setLeaders(updated);
-    dbSaveLeaders(updated);
-    if (currentLeader) {
-      const refreshed = updated.find((l) => l.name === currentLeader.name);
-      if (refreshed) setCurrentLeader(refreshed);
-    }
-    setEditLeadersOpen(false);
-    addLog('leaders_updated',
-      `Team updated: ${updated.map((l) => `${l.name} (${l.role})`).join(', ')}.`,
-      currentLeader?.name);
-    showSnackbar('Team updated successfully.');
+    dbSaveLeaders(updated).then(() => {
+      setLeaders(updated);
+      if (currentLeader) {
+        const refreshed = updated.find((l) => l.name === currentLeader.name);
+        if (refreshed) setCurrentLeader(refreshed);
+      }
+      setEditLeadersOpen(false);
+      addLog('leaders_updated',
+        `Team updated: ${updated.map((l) => `${l.name} (${l.role})`).join(', ')}.`,
+        currentLeader?.name);
+      showSnackbar('Team updated successfully.');
+    });
   };
 
   // ── Member management ─────────────────────────────────────────────────
 
   const handleMembersSave = (updated: Member[]) => {
-    saveMembers(updated);
-    setMembers(updated);
-    dbSaveMembers(updated);
-    setMembersOpen(false);
-    addLog(
-      'leaders_updated',
-      `Group members updated: ${updated.length} member${updated.length !== 1 ? 's' : ''} in roster.`,
-      currentLeader?.name,
-    );
-    showSnackbar('Members saved successfully.');
+    dbSaveMembers(updated).then(() => {
+      setMembers(updated);
+      setMembersOpen(false);
+      addLog(
+        'leaders_updated',
+        `Group members updated: ${updated.length} member${updated.length !== 1 ? 's' : ''} in roster.`,
+        currentLeader?.name,
+      );
+      showSnackbar('Members saved successfully.');
+    });
   };
 
   // ── Entry handlers ────────────────────────────────────────────────────
@@ -359,23 +366,23 @@ export default function App() {
   const handleAddEntry = (values: EntryFormValues) => {
     const reviewer = leaders.find((l) => l.name === values.leaderName);
     const entry: ReviewEntry = {
-      id:           uuidv4(),
-      leaderName:   values.leaderName,
-      leaderRole:   reviewer?.role ?? 'core',
-      revieweeName: values.revieweeName.trim(),
-      revieweeRole: values.revieweeRole,
-      memberId:     values.memberId,
-      review:       values.review.trim(),
+      id:            uuidv4(),
+      leaderName:    values.leaderName,
+      leaderRole:    reviewer?.role ?? 'core',
+      revieweeName:  values.revieweeName.trim(),
+      revieweeRole:  values.revieweeRole,
+      memberId:      values.memberId,
+      review:        values.review.trim(),
       plannedAction: values.plannedAction.trim(),
-      createdAt:    new Date().toISOString(),
+      createdAt:     new Date().toISOString(),
     };
-    const updated = [entry, ...entries];
-    setEntries(updated);
-    dbSaveEntry(entry);
-    addLog('entry_added',
-      `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
-      currentLeader?.name);
-    showSnackbar('Entry added successfully.');
+    dbSaveEntry(entry).then(() => {
+      setEntries((prev) => [entry, ...prev]);
+      addLog('entry_added',
+        `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
+        currentLeader?.name);
+      showSnackbar('Entry added successfully.');
+    });
   };
 
   const handleEditEntry = (values: EntryFormValues) => {
@@ -391,38 +398,34 @@ export default function App() {
       review:        values.review.trim(),
       plannedAction: values.plannedAction.trim(),
     };
-    const updated = entries.map((e) => e.id === editingEntry.id ? updatedEntry : e);
-    setEntries(updated);
-    dbSaveEntry(updatedEntry);
-    setEditingEntry(null);
-    addLog('entry_edited',
-      `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
-      currentLeader?.name);
-    showSnackbar('Entry updated successfully.');
+    dbSaveEntry(updatedEntry).then(() => {
+      setEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updatedEntry : e));
+      setEditingEntry(null);
+      addLog('entry_edited',
+        `Entry for "${values.revieweeName.trim()}" updated by ${values.leaderName}.`,
+        currentLeader?.name);
+      showSnackbar('Entry updated successfully.');
+    });
   };
 
   const handleFormSubmit = (values: EntryFormValues) =>
     editingEntry ? handleEditEntry(values) : handleAddEntry(values);
 
   const handleToggleAction = (entry: ReviewEntry) => {
-    const updated = entries.map((e) =>
-      e.id === entry.id
-        ? {
-            ...e,
-            actionCompleted:    !e.actionCompleted,
-            actionCompletedAt:   !e.actionCompleted ? new Date().toISOString() : undefined,
-          }
-        : e
-    );
-    setEntries(updated);
-    const toggled = updated.find((e) => e.id === entry.id)!;
-    dbSaveEntry(toggled);
-    addLog(
-      toggled.actionCompleted ? 'entry_edited' : 'entry_edited',
-      `Action for "${entry.revieweeName}" marked as ${toggled.actionCompleted ? 'completed' : 'pending'} by ${currentLeader?.name ?? entry.leaderName}.`,
-      currentLeader?.name,
-    );
-    showSnackbar(toggled.actionCompleted ? 'Action marked as completed.' : 'Action marked as pending.');
+    const toggled: ReviewEntry = {
+      ...entry,
+      actionCompleted:   !entry.actionCompleted,
+      actionCompletedAt: !entry.actionCompleted ? new Date().toISOString() : undefined,
+    };
+    dbSaveEntry(toggled).then(() => {
+      setEntries((prev) => prev.map((e) => e.id === entry.id ? toggled : e));
+      addLog(
+        'entry_edited',
+        `Action for "${entry.revieweeName}" marked as ${toggled.actionCompleted ? 'completed' : 'pending'} by ${currentLeader?.name ?? entry.leaderName}.`,
+        currentLeader?.name,
+      );
+      showSnackbar(toggled.actionCompleted ? 'Action marked as completed.' : 'Action marked as pending.');
+    });
   };
 
   const handleStartEdit = (entry: ReviewEntry) => {
@@ -433,12 +436,12 @@ export default function App() {
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
     const name = deleteTarget.revieweeName ?? (deleteTarget as any).name;
-    const updated = entries.filter((e) => e.id !== deleteTarget.id);
-    setEntries(updated);
-    dbDeleteEntry(deleteTarget.id);
-    setDeleteTarget(null);
-    addLog('entry_deleted', `Entry for "${name}" was deleted.`, currentLeader?.name);
-    showSnackbar('Entry deleted.');
+    dbDeleteEntry(deleteTarget.id).then(() => {
+      setEntries((prev) => prev.filter((e) => e.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      addLog('entry_deleted', `Entry for "${name}" was deleted.`, currentLeader?.name);
+      showSnackbar('Entry deleted.');
+    });
   };
 
   // ── View helpers ──────────────────────────────────────────────────────
@@ -449,12 +452,23 @@ export default function App() {
   };
 
   const handleClearAuditLog = () => {
-    clearAuditLog();
+    // No cloud delete-all — just clear local state
     setAuditLog([]);
     showSnackbar('Activity log cleared.');
   };
 
   // ── Auth gates ────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>Loading…</Box>
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   if (authState === 'leader_setup') {
     return (

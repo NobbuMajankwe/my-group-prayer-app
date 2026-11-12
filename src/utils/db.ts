@@ -1,33 +1,24 @@
 /**
- * db.ts — Cloud-first data layer for PrayTogether
+ * db.ts — DynamoDB-only data layer for PrayTogether
  *
- * Every function tries AppSync/DynamoDB first.
- * On failure (network offline, misconfigured endpoint, etc.)
- * it falls back to localStorage so the app keeps working.
+ * All reads pull directly from AppSync/DynamoDB.
+ * All writes go directly to AppSync/DynamoDB.
+ * No localStorage cache — the cloud is the single source of truth.
  *
- * HOW TO ACTIVATE THE CLOUD:
- *   1. Run `npx ampx sandbox` (dev) OR push to your Amplify branch (prod)
- *   2. The CLI writes amplify_outputs.json with real endpoints
- *   3. That's it — the app detects the config and uses DynamoDB automatically
+ * Amplify.configure() must be called before initAmplify() runs.
+ * That is done in main.tsx using amplify_outputs.json.
  */
 
-import { generateClient }  from 'aws-amplify/data';
-import { Amplify }         from 'aws-amplify';
-import {
-  loadEntries,  saveEntries,
-  loadLeaders,  saveLeaders,
-  loadMembers,  saveMembers,
-  loadAuditLog, appendAuditEntry as appendAuditLocal,
-} from './storage';
+import { generateClient } from 'aws-amplify/data';
+import { Amplify }        from 'aws-amplify';
 import type { ReviewEntry, LeaderPerson, Member } from '../types/ReviewEntry';
 import type { AuditEntry }                        from '../types/AuditLog';
-
-// ── Amplify config ─────────────────────────────────────────────────────────
-// We type the client loosely (any) because the full Schema type comes from
-// @aws-amplify/backend which lives in the amplify/ directory and is compiled
-// separately by the Amplify CLI — not by the main Vite build.
+import { v4 as uuidv4 }                           from 'uuid';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ── Client type ────────────────────────────────────────────────────────────
+
 type DataClient = {
   models: {
     Leader:      ModelApi;
@@ -44,78 +35,76 @@ interface ModelApi {
   delete(input: { id: string }): Promise<{ data: any; errors?: any[] }>;
 }
 
-let cloudAvailable = false;
 let client: DataClient | null = null;
 
 export function initAmplify() {
-  // Amplify.configure() is called in main.tsx before the app renders.
-  // Here we just check whether a real AppSync endpoint is configured and, if
-  // so, create the data client so all db* functions can use it.
+  // Amplify.configure() was already called in main.tsx.
+  // Here we just check whether a real AppSync endpoint landed in the config,
+  // and if so, create the data client.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config = (Amplify as any).getConfig?.() ?? {};
-    const url: string = config?.API?.GraphQL?.endpoint ?? config?.data?.url ?? '';
+    const config: any = (Amplify as any).getConfig?.() ?? {};
+    const url: string =
+      config?.API?.GraphQL?.endpoint ??
+      config?.data?.url ??
+      '';
     if (url && !url.startsWith('REPLACE')) {
       client = generateClient() as unknown as DataClient;
-      cloudAvailable = true;
       console.info('[PrayTogether] Cloud database active ✅');
     } else {
-      console.info('[PrayTogether] Cloud database not configured — using localStorage ✅');
+      console.warn('[PrayTogether] ⚠️  Cloud not configured — amplify_outputs.json still has placeholder values.');
     }
-  } catch {
-    console.info('[PrayTogether] Amplify init skipped — using localStorage');
+  } catch (e) {
+    console.error('[PrayTogether] Amplify init failed', e);
   }
 }
 
-export function isCloudActive() { return cloudAvailable; }
+export function isCloudActive() { return client !== null; }
+
+// ── Helper: assert client is ready ────────────────────────────────────────
+
+function getClient(): DataClient {
+  if (!client) throw new Error('Amplify client not initialised. Check amplify_outputs.json.');
+  return client;
+}
 
 // ── Leaders ────────────────────────────────────────────────────────────────
 
 export async function dbLoadLeaders(): Promise<LeaderPerson[]> {
-  if (!cloudAvailable || !client) return loadLeaders();
-  try {
-    const { data, errors } = await client.models.Leader.list({});
-    if (errors?.length) throw new Error(errors[0].message);
-    return (data ?? []).map(mapLeader);
-  } catch (e) {
-    console.warn('[db] loadLeaders fallback', e);
-    return loadLeaders();
-  }
+  const { data, errors } = await getClient().models.Leader.list({});
+  if (errors?.length) throw new Error(errors[0].message);
+  return (data ?? []).map(mapLeader);
 }
 
 export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
-  saveLeaders(leaders); // always keep localStorage in sync
-  if (!cloudAvailable || !client) return;
-  try {
-    const existing = await client.models.Leader.list({});
-    // Upsert: for each leader, update if exists, create if not
-    for (const l of leaders) {
-      const found = existing.data?.find((r) => r.name === l.name);
-      if (found) {
-        await client.models.Leader.update({
-          id:               found.id,
-          role:             l.role,
-          passwordHash:     l.passwordHash,
-          displayName:      l.displayName ?? null,
-        });
-      } else {
-        await client.models.Leader.create({
-          name:         l.name,
-          role:         l.role,
-          passwordHash: l.passwordHash,
-          displayName:  l.displayName ?? null,
-          reminderEnabled:  true,
-        });
-      }
+  const c = getClient();
+  const { data: existing } = await c.models.Leader.list({});
+
+  // Upsert each leader
+  for (const l of leaders) {
+    const found = existing?.find((r: any) => r.name === l.name);
+    if (found) {
+      await c.models.Leader.update({
+        id:              found.id,
+        role:            l.role,
+        passwordHash:    l.passwordHash,
+        displayName:     l.displayName ?? null,
+      });
+    } else {
+      await c.models.Leader.create({
+        name:            l.name,
+        role:            l.role,
+        passwordHash:    l.passwordHash,
+        displayName:     l.displayName ?? null,
+        reminderEnabled: true,
+      });
     }
-    // Delete records that were removed
-    for (const r of existing.data ?? []) {
-      if (!leaders.some((l) => l.name === r.name)) {
-        await client.models.Leader.delete({ id: r.id });
-      }
+  }
+
+  // Delete leaders that were removed
+  for (const r of existing ?? []) {
+    if (!leaders.some((l) => l.name === r.name)) {
+      await c.models.Leader.delete({ id: r.id });
     }
-  } catch (e) {
-    console.warn('[db] saveLeaders cloud failed, localStorage used', e);
   }
 }
 
@@ -123,125 +112,91 @@ export async function dbUpdateLeaderReminder(
   name: string,
   lastReminderSent: string,
 ): Promise<void> {
-  if (!cloudAvailable || !client) return;
-  try {
-    const { data } = await client.models.Leader.list({});
-    const found = data?.find((r) => r.name === name);
-    if (found) {
-      await client.models.Leader.update({ id: found.id, lastReminderSent });
-    }
-  } catch (e) {
-    console.warn('[db] updateLeaderReminder failed', e);
+  const c = getClient();
+  const { data } = await c.models.Leader.list({});
+  const found = data?.find((r: any) => r.name === name);
+  if (found) {
+    await c.models.Leader.update({ id: found.id, lastReminderSent });
   }
 }
 
 // ── Members ────────────────────────────────────────────────────────────────
 
 export async function dbLoadMembers(): Promise<Member[]> {
-  if (!cloudAvailable || !client) return loadMembers();
-  try {
-    const { data, errors } = await client.models.Member.list({});
-    if (errors?.length) throw new Error(errors[0].message);
-    return (data ?? []).map(mapMember);
-  } catch (e) {
-    console.warn('[db] loadMembers fallback', e);
-    return loadMembers();
-  }
+  const { data, errors } = await getClient().models.Member.list({});
+  if (errors?.length) throw new Error(errors[0].message);
+  return (data ?? []).map(mapMember);
 }
 
 export async function dbSaveMembers(members: Member[]): Promise<void> {
-  saveMembers(members);
-  if (!cloudAvailable || !client) return;
-  try {
-    const existing = await client.models.Member.list({});
-    for (const m of members) {
-      const found = existing.data?.find((r) => r.id === m.id);
-      if (found) {
-        await client.models.Member.update({
-          id:             found.id,
-          name:           m.name,
-          assignedLeader: m.assignedLeader,
-          assignedCore:   m.assignedCore ?? null,
-          notes:          m.notes ?? null,
-        });
-      } else {
-        await client.models.Member.create({
-          name:           m.name,
-          assignedLeader: m.assignedLeader,
-          assignedCore:   m.assignedCore ?? null,
-          notes:          m.notes ?? null,
-        });
-      }
+  const c = getClient();
+  const { data: existing } = await c.models.Member.list({});
+
+  for (const m of members) {
+    const found = existing?.find((r: any) => r.id === m.id);
+    if (found) {
+      await c.models.Member.update({
+        id:             found.id,
+        name:           m.name,
+        assignedLeader: m.assignedLeader,
+        assignedCore:   m.assignedCore ?? null,
+        notes:          m.notes ?? null,
+      });
+    } else {
+      await c.models.Member.create({
+        name:           m.name,
+        assignedLeader: m.assignedLeader,
+        assignedCore:   m.assignedCore ?? null,
+        notes:          m.notes ?? null,
+      });
     }
-    for (const r of existing.data ?? []) {
-      if (!members.some((m) => m.id === r.id)) {
-        await client.models.Member.delete({ id: r.id });
-      }
+  }
+
+  for (const r of existing ?? []) {
+    if (!members.some((m) => m.id === r.id)) {
+      await c.models.Member.delete({ id: r.id });
     }
-  } catch (e) {
-    console.warn('[db] saveMembers cloud failed', e);
   }
 }
 
 // ── Entries ────────────────────────────────────────────────────────────────
 
 export async function dbLoadEntries(): Promise<ReviewEntry[]> {
-  if (!cloudAvailable || !client) return loadEntries();
-  try {
-    const { data, errors } = await client.models.ReviewEntry.list({});
-    if (errors?.length) throw new Error(errors[0].message);
-    return (data ?? []).map(mapEntry);
-  } catch (e) {
-    console.warn('[db] loadEntries fallback', e);
-    return loadEntries();
-  }
+  const { data, errors } = await getClient().models.ReviewEntry.list({});
+  if (errors?.length) throw new Error(errors[0].message);
+  return (data ?? []).map(mapEntry);
 }
 
 export async function dbSaveEntry(entry: ReviewEntry): Promise<void> {
-  // For entries we store locally immediately, then sync to cloud
-  const all = loadEntries();
-  const idx = all.findIndex((e) => e.id === entry.id);
-  if (idx >= 0) all[idx] = entry; else all.unshift(entry);
-  saveEntries(all);
+  const c = getClient();
+  const { data } = await c.models.ReviewEntry.list({});
+  const found = data?.find((r: any) => r.id === entry.id);
 
-  if (!cloudAvailable || !client) return;
-  try {
-    const { data } = await client.models.ReviewEntry.list({});
-    const found = data?.find((r) => r.id === entry.id);
-    const payload = {
-      leaderName:        entry.leaderName,
-      leaderRole:        entry.leaderRole,
-      revieweeName:      entry.revieweeName,
-      revieweeRole:      entry.revieweeRole,
-      memberId:          entry.memberId ?? null,
-      review:            entry.review,
-      plannedAction:     entry.plannedAction,
-      createdAt:         entry.createdAt,
-      actionCompleted:   entry.actionCompleted ?? false,
-      actionCompletedAt: entry.actionCompletedAt ?? null,
-    };
-    if (found) {
-      await client.models.ReviewEntry.update({ id: found.id, ...payload });
-    } else {
-      await client.models.ReviewEntry.create(payload);
-    }
-  } catch (e) {
-    console.warn('[db] saveEntry cloud failed', e);
+  const payload = {
+    leaderName:        entry.leaderName,
+    leaderRole:        entry.leaderRole,
+    revieweeName:      entry.revieweeName,
+    revieweeRole:      entry.revieweeRole,
+    memberId:          entry.memberId ?? null,
+    review:            entry.review,
+    plannedAction:     entry.plannedAction,
+    createdAt:         entry.createdAt,
+    actionCompleted:   entry.actionCompleted ?? false,
+    actionCompletedAt: entry.actionCompletedAt ?? null,
+  };
+
+  if (found) {
+    await c.models.ReviewEntry.update({ id: found.id, ...payload });
+  } else {
+    await c.models.ReviewEntry.create(payload);
   }
 }
 
 export async function dbDeleteEntry(id: string): Promise<void> {
-  const all = loadEntries().filter((e) => e.id !== id);
-  saveEntries(all);
-
-  if (!cloudAvailable || !client) return;
-  try {
-    const { data } = await client.models.ReviewEntry.list({});
-    const found = data?.find((r) => r.id === id);
-    if (found) await client.models.ReviewEntry.delete({ id: found.id });
-  } catch (e) {
-    console.warn('[db] deleteEntry cloud failed', e);
-  }
+  const c = getClient();
+  const { data } = await c.models.ReviewEntry.list({});
+  const found = data?.find((r: any) => r.id === id);
+  if (found) await c.models.ReviewEntry.delete({ id: found.id });
 }
 
 // ── Audit log ──────────────────────────────────────────────────────────────
@@ -251,24 +206,41 @@ export async function dbAppendAudit(
   description: string,
   leaderName?: string,
 ): Promise<AuditEntry> {
-  const entry = appendAuditLocal(action, description, leaderName);
-  if (!cloudAvailable || !client) return entry;
-  try {
-    await client.models.AuditEntry.create({
-      action,
-      description,
-      leaderName:  leaderName ?? null,
-      timestamp:   entry.timestamp,
-    });
-  } catch (e) {
-    console.warn('[db] appendAudit cloud failed', e);
-  }
+  const entry: AuditEntry = {
+    id:          uuidv4(),
+    action,
+    description,
+    leaderName,
+    timestamp:   new Date().toISOString(),
+  };
+
+  await getClient().models.AuditEntry.create({
+    action,
+    description,
+    leaderName:  leaderName ?? null,
+    timestamp:   entry.timestamp,
+  });
+
   return entry;
+}
+
+export async function dbLoadAuditLog(): Promise<AuditEntry[]> {
+  const { data, errors } = await getClient().models.AuditEntry.list({});
+  if (errors?.length) throw new Error(errors[0].message);
+  return (data ?? [])
+    .map((r: any): AuditEntry => ({
+      id:          r.id,
+      action:      r.action,
+      description: r.description,
+      leaderName:  r.leaderName ?? undefined,
+      timestamp:   r.timestamp,
+    }))
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+    .slice(0, 500);
 }
 
 // ── Mappers ────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapLeader(r: any): LeaderPerson {
   return {
     name:         r.name,
@@ -278,7 +250,6 @@ function mapLeader(r: any): LeaderPerson {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapMember(r: any): Member {
   return {
     id:             r.id,
@@ -289,20 +260,18 @@ function mapMember(r: any): Member {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapEntry(r: any): ReviewEntry {
   return {
-    id:            r.id,
-    leaderName:    r.leaderName,
-    leaderRole:    r.leaderRole ?? 'core',
-    revieweeName:  r.revieweeName,
-    revieweeRole:  r.revieweeRole ?? 'member',
-    memberId:      r.memberId ?? undefined,
-    review:        r.review,
-    plannedAction: r.plannedAction,
-    createdAt:     r.createdAt,
+    id:               r.id,
+    leaderName:       r.leaderName,
+    leaderRole:       r.leaderRole ?? 'core',
+    revieweeName:     r.revieweeName,
+    revieweeRole:     r.revieweeRole ?? 'member',
+    memberId:         r.memberId ?? undefined,
+    review:           r.review,
+    plannedAction:    r.plannedAction,
+    createdAt:        r.createdAt,
+    actionCompleted:  r.actionCompleted ?? false,
+    actionCompletedAt: r.actionCompletedAt ?? undefined,
   };
 }
-
-// Re-export helpers that haven't changed
-export { loadAuditLog, loadEntries, saveEntries };
