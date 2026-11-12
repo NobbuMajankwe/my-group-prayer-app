@@ -79,16 +79,21 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
   const c = getClient();
   const { data: existing } = await c.models.Leader.list({});
 
-  // Upsert each leader
   for (const l of leaders) {
     const found = existing?.find((r: any) => r.name === l.name);
     if (found) {
-      await c.models.Leader.update({
-        id:              found.id,
-        role:            l.role,
-        passwordHash:    l.passwordHash,
-        displayName:     l.displayName ?? null,
-      });
+      const changed =
+        found.role         !== l.role         ||
+        found.passwordHash !== l.passwordHash ||
+        (found.displayName ?? undefined) !== l.displayName;
+      if (changed) {
+        await c.models.Leader.update({
+          id:           found.id,
+          role:         l.role,
+          passwordHash: l.passwordHash,
+          displayName:  l.displayName ?? null,
+        });
+      }
     } else {
       await c.models.Leader.create({
         name:            l.name,
@@ -100,7 +105,6 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
     }
   }
 
-  // Delete leaders that were removed
   for (const r of existing ?? []) {
     if (!leaders.some((l) => l.name === r.name)) {
       await c.models.Leader.delete({ id: r.id });
@@ -132,16 +136,24 @@ export async function dbSaveMembers(members: Member[]): Promise<void> {
   const c = getClient();
   const { data: existing } = await c.models.Member.list({});
 
+  // Only create/update members that are new or changed
   for (const m of members) {
     const found = existing?.find((r: any) => r.id === m.id);
     if (found) {
-      await c.models.Member.update({
-        id:             found.id,
-        name:           m.name,
-        assignedLeader: m.assignedLeader,
-        assignedCore:   m.assignedCore ?? null,
-        notes:          m.notes ?? null,
-      });
+      const changed =
+        found.name           !== m.name           ||
+        found.assignedLeader !== m.assignedLeader ||
+        (found.assignedCore  ?? undefined) !== m.assignedCore ||
+        (found.notes         ?? undefined) !== m.notes;
+      if (changed) {
+        await c.models.Member.update({
+          id:             found.id,
+          name:           m.name,
+          assignedLeader: m.assignedLeader,
+          assignedCore:   m.assignedCore ?? null,
+          notes:          m.notes ?? null,
+        });
+      }
     } else {
       await c.models.Member.create({
         name:           m.name,
