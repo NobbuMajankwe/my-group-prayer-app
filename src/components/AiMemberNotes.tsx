@@ -31,7 +31,12 @@ export default function AiMemberNotes({ memberName, recentRequests, onAccept }: 
       if (errors?.length) throw new Error(errors[0].message);
       setNote(data?.note ?? '');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Suggestion failed');
+      const msg = e instanceof Error ? e.message : '';
+      setError(
+        msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
+          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          : msg || 'Suggestion failed',
+      );
     } finally {
       setLoading(false);
     }

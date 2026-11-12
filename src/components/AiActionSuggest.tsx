@@ -26,7 +26,12 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
       if (errors?.length) throw new Error(errors[0].message);
       setSuggestion(data?.action ?? '');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'AI suggestion failed');
+      const msg = e instanceof Error ? e.message : '';
+      setError(
+        msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
+          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          : msg || 'AI suggestion failed',
+      );
     } finally {
       setLoading(false);
     }

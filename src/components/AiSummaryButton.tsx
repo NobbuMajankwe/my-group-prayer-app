@@ -28,7 +28,12 @@ export default function AiSummaryButton({ requests }: AiSummaryButtonProps) {
       if (errors?.length) throw new Error(errors[0].message);
       setSummary(data?.summary ?? '');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Summary failed');
+      const msg = e instanceof Error ? e.message : '';
+      setError(
+        msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
+          ? 'AI not available — run `npx ampx sandbox` to deploy the backend.'
+          : msg || 'Summary failed',
+      );
     } finally {
       setLoading(false);
     }
