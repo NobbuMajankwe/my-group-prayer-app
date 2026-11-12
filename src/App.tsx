@@ -308,6 +308,7 @@ export default function App() {
     saveLeaders(updatedLeaders);
     setLeaders(updatedLeaders);
     setCurrentLeader(updated);
+    dbSaveLeaders(updatedLeaders); // sync password/displayName changes to cloud
 
     // Detect what changed for the audit log
     const prev = leaders.find((l) => l.name === updated.name);

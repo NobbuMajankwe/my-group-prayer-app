@@ -48,12 +48,14 @@ let cloudAvailable = false;
 let client: DataClient | null = null;
 
 export function initAmplify() {
+  // Amplify.configure() is called in main.tsx before the app renders.
+  // Here we just check whether a real AppSync endpoint is configured and, if
+  // so, create the data client so all db* functions can use it.
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const outputs = (window as any).__amplify_outputs;
-    const url: string = outputs?.data?.url ?? '';
+    const config = (Amplify as any).getConfig?.() ?? {};
+    const url: string = config?.API?.GraphQL?.endpoint ?? config?.data?.url ?? '';
     if (url && !url.startsWith('REPLACE')) {
-      Amplify.configure(outputs);
       client = generateClient() as unknown as DataClient;
       cloudAvailable = true;
       console.info('[PrayTogether] Cloud database active ✅');
@@ -207,14 +209,16 @@ export async function dbSaveEntry(entry: ReviewEntry): Promise<void> {
     const { data } = await client.models.ReviewEntry.list({});
     const found = data?.find((r) => r.id === entry.id);
     const payload = {
-      leaderName:    entry.leaderName,
-      leaderRole:    entry.leaderRole,
-      revieweeName:  entry.revieweeName,
-      revieweeRole:  entry.revieweeRole,
-      memberId:      entry.memberId ?? null,
-      review:        entry.review,
-      plannedAction: entry.plannedAction,
-      createdAt:     entry.createdAt,
+      leaderName:        entry.leaderName,
+      leaderRole:        entry.leaderRole,
+      revieweeName:      entry.revieweeName,
+      revieweeRole:      entry.revieweeRole,
+      memberId:          entry.memberId ?? null,
+      review:            entry.review,
+      plannedAction:     entry.plannedAction,
+      createdAt:         entry.createdAt,
+      actionCompleted:   entry.actionCompleted ?? false,
+      actionCompletedAt: entry.actionCompletedAt ?? null,
     };
     if (found) {
       await client.models.ReviewEntry.update({ id: found.id, ...payload });
