@@ -146,6 +146,32 @@ function loadViewMode(): ViewMode {
   } catch { return 'card'; }
 }
 
+function getScopedEntries(
+  entries: ReviewEntry[],
+  leader: LeaderPerson,
+  members: Member[],
+  leaders: LeaderPerson[],
+): ReviewEntry[] {
+  if (leader.role === 'core') {
+    // Core sees only entries about their assigned members
+    const myMemberIds   = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.id));
+    const myMemberNames = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.name.toLowerCase()));
+    return entries.filter((e) =>
+      (e.memberId && myMemberIds.has(e.memberId)) ||
+      myMemberNames.has(e.revieweeName.toLowerCase()),
+    );
+  }
+  // Leader sees entries about their members AND their cores
+  const myMemberIds   = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.id));
+  const myMemberNames = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.name.toLowerCase()));
+  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && members.some((m) => m.assignedLeader === leader.name && m.assignedCore === l.name)).map((l) => l.name.toLowerCase()));
+  return entries.filter((e) =>
+    (e.memberId && myMemberIds.has(e.memberId)) ||
+    myMemberNames.has(e.revieweeName.toLowerCase()) ||
+    (e.revieweeRole === 'core' && myCoreNames.has(e.revieweeName.toLowerCase())),
+  );
+}
+
 function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
   const q = f.search.toLowerCase().trim();
   return entries.filter((e) => {
@@ -237,22 +263,27 @@ export default function App() {
   const [activeTab,       setActiveTab]        = useState<AppTab>('new');
 
   // ── Derived ───────────────────────────────────────────────────────────
+  const scopedEntries = useMemo(
+    () => currentLeader ? getScopedEntries(entries, currentLeader, members, leaders) : entries,
+    [entries, currentLeader, members, leaders],
+  );
+
   const filteredEntries = useMemo(
-    () => applyFilters(entries, filters),
-    [entries, filters]
+    () => applyFilters(scopedEntries, filters),
+    [scopedEntries, filters]
   );
 
   // Reminders: entries this leader reviewed that are ≥7 days old
   const reminderItems = useMemo(
-    () => currentLeader ? getReminders(entries, currentLeader.name) : [],
-    [entries, currentLeader]
+    () => currentLeader ? getReminders(scopedEntries, currentLeader.name) : [],
+    [scopedEntries, currentLeader]
   );
 
   // Unique week-start dates from all entries, newest first
   const weekOptions = useMemo(() => {
-    const weeks = new Set(entries.map((e) => getWeekStart(new Date(e.createdAt))));
+    const weeks = new Set(scopedEntries.map((e) => getWeekStart(new Date(e.createdAt))));
     return Array.from(weeks).sort((a, b) => b.localeCompare(a));
-  }, [entries]);
+  }, [scopedEntries]);
 
   // ── Helpers ───────────────────────────────────────────────────────────
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
@@ -561,7 +592,7 @@ export default function App() {
         >
 
           <Header
-            entries={entries}
+            entries={scopedEntries}
             currentLeader={currentLeader}
             auditCount={auditLog.length}
             memberCount={members.length}
@@ -662,8 +693,9 @@ export default function App() {
 
       <ReviewStatusDashboard
         open={statusOpen}
-        entries={entries}
+        entries={scopedEntries}
         members={members}
+        leaders={leaders}
         currentLeader={currentLeader}
         onToggleAction={handleToggleAction}
         onEditMember={() => { setStatusOpen(false); setMembersOpen(true); }}

@@ -19,6 +19,7 @@ interface ReviewStatusDashboardProps {
   open:            boolean;
   entries:         ReviewEntry[];
   members:         Member[];
+  leaders:         LeaderPerson[];
   currentLeader:   LeaderPerson;
   onToggleAction:  (entry: ReviewEntry) => void;
   onEditMember?:   () => void;
@@ -36,10 +37,10 @@ interface RevieweeStatus {
 }
 
 export default function ReviewStatusDashboard({
-  open, entries, members, currentLeader, onToggleAction, onEditMember, onClose,
+  open, entries, members, leaders, currentLeader, onToggleAction, onEditMember, onClose,
 }: ReviewStatusDashboardProps) {
 
-  // Members assigned to this leader/core (for "never reviewed" rows)
+  // Members/cores in scope for this leader
   const myMembers = useMemo(() => {
     if (currentLeader.role === 'leader') {
       return members.filter((m) => m.assignedLeader === currentLeader.name);
@@ -47,47 +48,33 @@ export default function ReviewStatusDashboard({
     return members.filter((m) => m.assignedCore === currentLeader.name);
   }, [members, currentLeader]);
 
-  // IDs of members in scope
-  const myMemberIds = useMemo(
-    () => new Set(myMembers.map((m) => m.id)),
-    [myMembers],
-  );
-  const myMemberNames = useMemo(
-    () => new Set(myMembers.map((m) => m.name.toLowerCase())),
-    [myMembers],
-  );
+  // For leaders: also include cores assigned under them
+  const myCores = useMemo(() => {
+    if (currentLeader.role !== 'leader') return [];
+    const coreNames = new Set(
+      myMembers.filter((m) => m.assignedCore).map((m) => m.assignedCore!),
+    );
+    return leaders.filter((l) => l.role === 'core' && coreNames.has(l.name));
+  }, [currentLeader.role, myMembers, leaders]);
 
-  // All entries relevant to this leader:
-  // - entries they wrote themselves, OR
-  // - for leaders: entries written by any reviewer about a member assigned to this leader
-  const myEntries = useMemo(() => {
-    return entries.filter((e) => {
-      if (e.leaderName === currentLeader.name) return true;
-      if (currentLeader.role === 'leader') {
-        // include entries about members assigned to this leader, regardless of who reviewed them
-        return (
-          (e.memberId && myMemberIds.has(e.memberId)) ||
-          myMemberNames.has(e.revieweeName.toLowerCase())
-        );
-      }
-      return false;
-    });
-  }, [entries, currentLeader, myMemberIds, myMemberNames]);
+  // entries are already scoped — use them directly
+  const myEntries = entries;
 
   // Build one status row per unique reviewee
   const statuses: RevieweeStatus[] = useMemo(() => {
-    // Start with roster members so "never reviewed" ones appear too
     const map = new Map<string, RevieweeStatus>();
 
     for (const m of myMembers) {
       map.set(m.name.toLowerCase(), {
-        name:         m.name,
-        memberId:     m.id,
-        revieweeRole: 'member',
-        allEntries:   [],
-        lastReview:   null,
-        actionPending: 0,
-        actionDone:    0,
+        name: m.name, memberId: m.id, revieweeRole: 'member',
+        allEntries: [], lastReview: null, actionPending: 0, actionDone: 0,
+      });
+    }
+    for (const c of myCores) {
+      const displayName = c.displayName || c.name;
+      map.set(displayName.toLowerCase(), {
+        name: displayName, memberId: undefined, revieweeRole: 'core',
+        allEntries: [], lastReview: null, actionPending: 0, actionDone: 0,
       });
     }
 
@@ -120,13 +107,12 @@ export default function ReviewStatusDashboard({
         actionDone:    sorted.filter((e) =>  e.actionCompleted).length,
       };
     }).sort((a, b) => {
-      // Never-reviewed first, then by last review date desc
       if (!a.lastReview && b.lastReview)  return -1;
       if (a.lastReview  && !b.lastReview) return  1;
       if (!a.lastReview && !b.lastReview) return a.name.localeCompare(b.name);
       return new Date(b.lastReview!.createdAt).getTime() - new Date(a.lastReview!.createdAt).getTime();
     });
-  }, [myMembers, myEntries]);
+  }, [myMembers, myCores, myEntries]);
 
   const totalReviewed   = statuses.filter((s) => s.lastReview).length;
   const totalUnreviewed = statuses.filter((s) => !s.lastReview).length;

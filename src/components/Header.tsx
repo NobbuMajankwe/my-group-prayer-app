@@ -463,7 +463,7 @@ export default function Header({
           />
           <Tab
             value="reviews"
-            label={`Reviews${entries.length > 0 ? ` (${entries.length})` : ''}`}
+            label={`Requests${entries.length > 0 ? ` (${entries.length})` : ''}`}
             icon={<ListAltOutlinedIcon sx={{ fontSize: 17 }} />}
             iconPosition="start"
           />
