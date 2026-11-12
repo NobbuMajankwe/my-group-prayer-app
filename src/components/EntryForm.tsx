@@ -34,6 +34,8 @@ interface EntryFormProps {
   saving?:        boolean;
 }
 
+type NameOption = { label: string; memberId: string; core: string | undefined };
+
 const EMPTY: EntryFormValues = {
   leaderName: '', revieweeName: '', revieweeRole: 'member',
   prayerRequest: '', plannedAction: '', memberId: undefined, chatInitiated: false,
@@ -43,7 +45,7 @@ const MEMBER_BG  = 'rgba(124,58,237,0.08)';
 const MEMBER_COL = '#5b21b6';
 
 export default function EntryForm({
-  members, currentLeader, onSubmit, editingEntry, onCancelEdit, saving,
+  leaders, members, currentLeader, onSubmit, editingEntry, onCancelEdit, saving,
 }: EntryFormProps) {
   const {
     register, handleSubmit, reset, control, setValue, watch,
@@ -52,18 +54,30 @@ export default function EntryForm({
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const chatInitiated     = watch('chatInitiated');
+  const revieweeRole      = watch('revieweeRole');
   const selectedLeaderName = currentLeader.name;
   const isLeader           = currentLeader.role === 'leader';
 
-  const reviewerMembers = useMemo(() => {
-    if (isLeader) return members.filter((m) => m.assignedLeader === selectedLeaderName);
-    return members.filter((m) => m.assignedCore === selectedLeaderName);
-  }, [selectedLeaderName, isLeader, members]);
+  const nameOptions = useMemo((): NameOption[] => {
+    if (isLeader && revieweeRole === 'core') {
+      return leaders
+        .filter((l) => l.role === 'core')
+        .map((l) => ({ label: l.displayName || l.name, memberId: l.name, core: undefined }));
+    }
+    const assignedMembers = isLeader
+      ? members.filter((m) => m.assignedLeader === selectedLeaderName)
+      : members.filter((m) => m.assignedCore === selectedLeaderName);
+    return assignedMembers.map((m) => ({ label: m.name, memberId: m.id, core: m.assignedCore }));
+  }, [selectedLeaderName, isLeader, revieweeRole, members, leaders]);
 
   useEffect(() => {
     setValue('leaderName', currentLeader.name);
     if (!isLeader) setValue('revieweeRole', 'member');
   }, [currentLeader.name, isLeader, setValue]);
+
+  useEffect(() => {
+    if (!editingEntry) { setValue('revieweeName', ''); setValue('memberId', undefined); }
+  }, [revieweeRole, editingEntry, setValue]);
 
   useEffect(() => {
     if (editingEntry) {
@@ -91,10 +105,7 @@ export default function EntryForm({
   // Chat-only mode: chat initiated but no prayer request yet
   const isChatOnly = chatInitiated && !watch('prayerRequest').trim();
 
-  type MemberOption = { label: string; memberId: string; core: string | undefined };
-  const memberOptions: MemberOption[] = reviewerMembers.map((m) => ({
-    label: m.name, memberId: m.id, core: m.assignedCore,
-  }));
+
 
   return (
     <Card
@@ -191,11 +202,11 @@ export default function EntryForm({
           <Controller name="revieweeName" control={control}
             rules={{ required: 'Participant name is required.' }}
             render={({ field }) => {
-              if (memberOptions.length > 0) {
-                const currentOption = memberOptions.find((o) => o.label === field.value) ?? null;
+              if (nameOptions.length > 0) {
+                const currentOption = nameOptions.find((o) => o.label === field.value) ?? null;
                 return (
-                  <Autocomplete<MemberOption, false, false, true>
-                    options={memberOptions}
+                  <Autocomplete<NameOption, false, false, true>
+                    options={nameOptions}
                     getOptionLabel={(o) => (typeof o === 'string' ? o : o.label)}
                     value={currentOption}
                     onChange={(_, newVal) => {
