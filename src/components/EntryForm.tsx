@@ -211,7 +211,8 @@ export default function EntryForm({
           <Controller name="revieweeName" control={control}
             rules={{ required: 'Participant name is required.' }}
             render={({ field }) => {
-              if (nameOptions.length > 0) {
+              const showAutocomplete = nameOptions.length > 0 || !isLeader;
+              if (showAutocomplete) {
                 const currentOption = nameOptions.find((o) => o.label === field.value) ?? null;
                 return (
                   <Autocomplete<NameOption, false, false, true>
