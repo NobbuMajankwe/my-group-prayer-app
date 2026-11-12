@@ -55,7 +55,7 @@ export const generateReviewsPdf = (entries: ReviewEntry[]): void => {
   // --- Title ---
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
-  doc.text('Review & Action Tracker', PAGE_MARGIN, y);
+  doc.text('Prayer & Action Tracker', PAGE_MARGIN, y);
   y += 10;
 
   // --- Generated date ---
@@ -117,16 +117,16 @@ export const generateReviewsPdf = (entries: ReviewEntry[]): void => {
     y = writeLines(doc, nameLines, PAGE_MARGIN, y, pageHeight);
     y += SECTION_GAP;
 
-    // --- Review label ---
+    // --- Prayer Request label ---
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text('Review', PAGE_MARGIN, y);
+    doc.text('Prayer Request', PAGE_MARGIN, y);
     y += LINE_HEIGHT;
 
-    // --- Review value ---
+    // --- Prayer Request value ---
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    const reviewLines = splitText(doc, entry.review, CONTENT_WIDTH);
+    const reviewLines = splitText(doc, entry.prayerRequest || '(awaiting prayer request)', CONTENT_WIDTH);
     y = writeLines(doc, reviewLines, PAGE_MARGIN, y, pageHeight);
     y += SECTION_GAP;
 

@@ -190,9 +190,11 @@ export async function dbSaveEntry(entry: ReviewEntry): Promise<void> {
     revieweeName:      entry.revieweeName,
     revieweeRole:      entry.revieweeRole,
     memberId:          entry.memberId ?? null,
-    review:            entry.review,
-    plannedAction:     entry.plannedAction,
+    prayerRequest:     entry.prayerRequest ?? '',
+    plannedAction:     entry.plannedAction ?? '',
     createdAt:         entry.createdAt,
+    chatInitiated:     entry.chatInitiated ?? false,
+    chatInitiatedAt:   entry.chatInitiatedAt ?? null,
     actionCompleted:   entry.actionCompleted ?? false,
     actionCompletedAt: entry.actionCompletedAt ?? null,
   };
@@ -280,9 +282,11 @@ function mapEntry(r: any): ReviewEntry {
     revieweeName:     r.revieweeName,
     revieweeRole:     r.revieweeRole ?? 'member',
     memberId:         r.memberId ?? undefined,
-    review:           r.review,
-    plannedAction:    r.plannedAction,
+    prayerRequest:    r.prayerRequest ?? r.review ?? '',   // backwards compat
+    plannedAction:    r.plannedAction ?? '',
     createdAt:        r.createdAt,
+    chatInitiated:    r.chatInitiated ?? false,
+    chatInitiatedAt:  r.chatInitiatedAt ?? undefined,
     actionCompleted:  r.actionCompleted ?? false,
     actionCompletedAt: r.actionCompletedAt ?? undefined,
   };

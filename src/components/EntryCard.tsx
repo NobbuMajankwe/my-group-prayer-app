@@ -6,6 +6,7 @@ import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import ChatIcon from '@mui/icons-material/ChatBubbleOutlined';
 import type { ReviewEntry, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
 
 const LEADER_COLOURS: Record<LeaderRole, { bg: string; border: string; color: string }> = {
@@ -91,6 +92,16 @@ export default function EntryCard({ entry, onEdit, onDelete, onToggleAction }: E
                 {entry.leaderName}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>{dateLabel}</Typography>
+              {entry.chatInitiated && (
+                <Chip
+                  icon={<ChatIcon sx={{ fontSize: '11px !important' }} />}
+                  label="Chat initiated"
+                  size="small"
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700,
+                    bgcolor: 'rgba(14,165,233,0.08)', color: '#0369a1',
+                    border: '1px solid rgba(14,165,233,0.2)' }}
+                />
+              )}
             </Box>
           </Box>
 
@@ -108,60 +119,70 @@ export default function EntryCard({ entry, onEdit, onDelete, onToggleAction }: E
           </Box>
         </Box>
 
-        {/* Review */}
-        <Box sx={{ mb: 2 }}>
-          <SectionLabel>Review</SectionLabel>
-          <SectionText>{entry.review}</SectionText>
-        </Box>
+        {/* Prayer request */}
+        {entry.prayerRequest ? (
+          <Box sx={{ mb: 2 }}>
+            <SectionLabel>Prayer Request</SectionLabel>
+            <SectionText>{entry.prayerRequest}</SectionText>
+          </Box>
+        ) : entry.chatInitiated ? (
+          <Box sx={{ mb: 2, px: 1.5, py: 1, borderRadius: 2,
+            bgcolor: 'rgba(14,165,233,0.05)', border: '1px dashed rgba(14,165,233,0.25)' }}>
+            <Typography variant="caption" sx={{ color: '#0369a1', fontWeight: 600 }}>
+              Awaiting prayer request — edit to add once they share it
+            </Typography>
+          </Box>
+        ) : null}
 
         <Divider sx={{ mb: 2, borderColor: alpha('#7c3aed', 0.07) }} />
 
         {/* Planned action */}
-        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#7c3aed', 0.03), border: '1px solid', borderColor: alpha('#7c3aed', 0.08) }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-            <SectionLabel>Planned Action</SectionLabel>
-            <Chip
-              icon={entry.actionCompleted
-                ? <CheckCircleIcon sx={{ fontSize: '12px !important' }} />
-                : <RadioButtonUncheckedIcon sx={{ fontSize: '12px !important' }} />}
-              label={entry.actionCompleted ? 'Done' : 'Pending'}
-              size="small"
-              sx={{
-                height: 18, fontSize: '0.6rem', fontWeight: 700,
-                bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)',
-                color:   entry.actionCompleted ? '#15803d' : '#92400e',
-                border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.25)'}`,
-              }}
-            />
-          </Box>
-          <SectionText>{entry.plannedAction}</SectionText>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
-            <Tooltip title={entry.actionCompleted ? 'Mark as pending' : 'Mark action as done'}>
+        {entry.plannedAction ? (
+          <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#7c3aed', 0.03), border: '1px solid', borderColor: alpha('#7c3aed', 0.08) }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <SectionLabel>Planned Action</SectionLabel>
               <Chip
-                onClick={() => onToggleAction(entry)}
                 icon={entry.actionCompleted
-                  ? <CheckCircleIcon sx={{ fontSize: '14px !important', color: '#15803d !important' }} />
-                  : <RadioButtonUncheckedIcon sx={{ fontSize: '14px !important', color: '#b91c1c !important' }} />}
-                label={entry.actionCompleted ? 'Action completed' : 'Mark as done'}
-                clickable
+                  ? <CheckCircleIcon sx={{ fontSize: '12px !important' }} />
+                  : <RadioButtonUncheckedIcon sx={{ fontSize: '12px !important' }} />}
+                label={entry.actionCompleted ? 'Done' : 'Pending'}
                 size="small"
                 sx={{
-                  height: 24, fontSize: '0.68rem', fontWeight: 700,
-                  bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.08)' : 'transparent',
-                  color:   entry.actionCompleted ? '#15803d' : '#b91c1c',
-                  border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.25)' : 'rgba(220,38,38,0.2)'}`,
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(220,38,38,0.06)' },
+                  height: 18, fontSize: '0.6rem', fontWeight: 700,
+                  bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)',
+                  color:   entry.actionCompleted ? '#15803d' : '#92400e',
+                  border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.25)'}`,
                 }}
               />
-            </Tooltip>
-            {entry.actionCompleted && entry.actionCompletedAt && (
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                {new Date(entry.actionCompletedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-              </Typography>
-            )}
+            </Box>
+            <SectionText>{entry.plannedAction}</SectionText>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
+              <Tooltip title={entry.actionCompleted ? 'Mark as pending' : 'Mark action as done'}>
+                <Chip
+                  onClick={() => onToggleAction(entry)}
+                  icon={entry.actionCompleted
+                    ? <CheckCircleIcon sx={{ fontSize: '14px !important', color: '#15803d !important' }} />
+                    : <RadioButtonUncheckedIcon sx={{ fontSize: '14px !important', color: '#b91c1c !important' }} />}
+                  label={entry.actionCompleted ? 'Action completed' : 'Mark as done'}
+                  clickable size="small"
+                  sx={{
+                    height: 24, fontSize: '0.68rem', fontWeight: 700,
+                    bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.08)' : 'transparent',
+                    color:   entry.actionCompleted ? '#15803d' : '#b91c1c',
+                    border: `1px solid ${entry.actionCompleted ? 'rgba(34,197,94,0.25)' : 'rgba(220,38,38,0.2)'}`,
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: entry.actionCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(220,38,38,0.06)' },
+                  }}
+                />
+              </Tooltip>
+              {entry.actionCompleted && entry.actionCompletedAt && (
+                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                  {new Date(entry.actionCompletedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                </Typography>
+              )}
+            </Box>
           </Box>
-        </Box>
+        ) : null}
 
       </CardContent>
     </Card>

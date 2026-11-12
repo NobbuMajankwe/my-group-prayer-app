@@ -36,9 +36,11 @@ const schema = a.schema({
       revieweeName:        a.string().required(),
       revieweeRole:        a.enum(['member', 'core']),
       memberId:            a.string(),
-      review:              a.string().required(),
-      plannedAction:       a.string().required(),
+      prayerRequest:       a.string(),
+      plannedAction:       a.string(),
       createdAt:           a.string().required(),
+      chatInitiated:       a.boolean().default(false),
+      chatInitiatedAt:     a.string(),
       actionCompleted:     a.boolean().default(false),
       actionCompletedAt:   a.string(),
     })

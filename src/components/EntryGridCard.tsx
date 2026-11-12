@@ -53,7 +53,8 @@ export default function EntryGridCard({ entry, onEdit, onDelete, onToggleAction 
     day: 'numeric', month: 'short', year: 'numeric',
   });
 
-  const reviewLong  = entry.review.length > PREVIEW_CHARS;
+  const pr         = entry.prayerRequest ?? '';
+  const reviewLong  = pr.length > PREVIEW_CHARS;
   const actionLong  = entry.plannedAction.length > PREVIEW_CHARS;
   const canExpand   = reviewLong || actionLong;
 
@@ -146,17 +147,23 @@ export default function EntryGridCard({ entry, onEdit, onDelete, onToggleAction 
 
         <Divider sx={{ borderColor: alpha(PURPLE, 0.07) }} />
 
-        {/* Review */}
+        {/* Prayer request */}
         <Box sx={{ flex: 1 }}>
           <Typography
             variant="caption"
             sx={{ display: 'block', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'text.disabled', mb: 0.5 }}
           >
-            Review
+            Prayer Request
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.7, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-            {expanded ? entry.review : clamp(entry.review, PREVIEW_CHARS)}
-          </Typography>
+          {pr ? (
+            <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.7, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+              {expanded ? pr : clamp(pr, PREVIEW_CHARS)}
+            </Typography>
+          ) : (
+            <Typography variant="body2" sx={{ color: '#0369a1', fontStyle: 'italic' }}>
+              {entry.chatInitiated ? 'Chat initiated — awaiting prayer request' : ''}
+            </Typography>
+          )}
         </Box>
 
         {/* Planned action — always shown, collapsed if long */}

@@ -101,7 +101,7 @@ export default function EntryListRow({ entry, index, isLast, onEdit, onDelete, o
           </Typography>
         </Box>
 
-        {/* Review preview */}
+        {/* Prayer request preview */}
         <Typography
           variant="body2"
           sx={{
@@ -114,7 +114,7 @@ export default function EntryListRow({ entry, index, isLast, onEdit, onDelete, o
             display: { xs: 'none', md: 'block' },
           }}
         >
-          {entry.review}
+          {entry.prayerRequest || (entry.chatInitiated ? '— chat initiated, awaiting request' : '')}
         </Typography>
 
         {/* Date */}
@@ -171,11 +171,17 @@ export default function EntryListRow({ entry, index, isLast, onEdit, onDelete, o
         >
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'text.disabled', display: 'block', mb: 0.5 }}>
-              Review
+              Prayer Request
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.75 }}>
-              {entry.review}
-            </Typography>
+            {entry.prayerRequest ? (
+              <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.75 }}>
+                {entry.prayerRequest}
+              </Typography>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#0369a1', fontStyle: 'italic' }}>
+                Awaiting prayer request
+              </Typography>
+            )}
           </Box>
           <Divider sx={{ borderColor: alpha('#7c3aed', 0.08) }} />
           <Box>

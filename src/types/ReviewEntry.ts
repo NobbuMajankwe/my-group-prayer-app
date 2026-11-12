@@ -23,9 +23,11 @@ export interface ReviewEntry {
   revieweeName: string;
   revieweeRole: RevieweeRole;
   memberId?:    string;
-  review:       string;
-  plannedAction: string;
+  prayerRequest:  string;          // the prayer request shared
+  plannedAction:  string;          // follow-up action
   createdAt:    string;
-  actionCompleted?:   boolean;  // has the planned action been acted on?
-  actionCompletedAt?:  string;  // ISO date when action was marked complete
+  chatInitiated?:    boolean;      // did I initiate the chat to ask for a request?
+  chatInitiatedAt?:  string;       // ISO date when chat was initiated
+  actionCompleted?:   boolean;
+  actionCompletedAt?: string;
 }

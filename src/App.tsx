@@ -150,10 +150,10 @@ function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
   const q = f.search.toLowerCase().trim();
   return entries.filter((e) => {
     if (q) {
-      const name   = (e.revieweeName ?? (e as any).name ?? '').toLowerCase();
-      const review = e.review.toLowerCase();
-      const action = e.plannedAction.toLowerCase();
-      if (!name.includes(q) && !review.includes(q) && !action.includes(q)) return false;
+      const name    = (e.revieweeName ?? (e as any).name ?? '').toLowerCase();
+      const request = (e.prayerRequest ?? '').toLowerCase();
+      const action  = (e.plannedAction ?? '').toLowerCase();
+      if (!name.includes(q) && !request.includes(q) && !action.includes(q)) return false;
     }
     if (f.reviewer     && e.leaderName   !== f.reviewer)     return false;
     if (f.leaderRole   && e.leaderRole   !== f.leaderRole)   return false;
@@ -394,24 +394,27 @@ export default function App() {
 
   const handleAddEntry = (values: EntryFormValues) => {
     const reviewer = leaders.find((l) => l.name === values.leaderName);
+    const now = new Date().toISOString();
     const entry: ReviewEntry = {
-      id:            uuidv4(),
-      leaderName:    values.leaderName,
-      leaderRole:    reviewer?.role ?? 'core',
-      revieweeName:  values.revieweeName.trim(),
-      revieweeRole:  values.revieweeRole,
-      memberId:      values.memberId,
-      review:        values.review.trim(),
-      plannedAction: values.plannedAction.trim(),
-      createdAt:     new Date().toISOString(),
+      id:             uuidv4(),
+      leaderName:     values.leaderName,
+      leaderRole:     reviewer?.role ?? 'core',
+      revieweeName:   values.revieweeName.trim(),
+      revieweeRole:   values.revieweeRole,
+      memberId:       values.memberId,
+      prayerRequest:  values.prayerRequest.trim(),
+      plannedAction:  values.plannedAction.trim(),
+      createdAt:      now,
+      chatInitiated:  values.chatInitiated,
+      chatInitiatedAt: values.chatInitiated ? now : undefined,
     };
     setSaving(true);
     dbSaveEntry(entry).then(() => {
       setEntries((prev) => [entry, ...prev]);
       addLog('entry_added',
-        `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
+        `${values.chatInitiated ? 'Chat initiated' : 'Prayer request logged'} for "${entry.revieweeName}" by ${entry.leaderName}.`,
         currentLeader?.name);
-      showSnackbar('Entry added successfully.');
+      showSnackbar(values.chatInitiated ? 'Chat logged — edit to add the prayer request later.' : 'Prayer request logged.');
       setActiveTab('reviews');
     }).finally(() => setSaving(false));
   };
@@ -426,8 +429,12 @@ export default function App() {
       revieweeName:  values.revieweeName.trim(),
       revieweeRole:  values.revieweeRole,
       memberId:      values.memberId,
-      review:        values.review.trim(),
+      prayerRequest: values.prayerRequest.trim(),
       plannedAction: values.plannedAction.trim(),
+      chatInitiated: values.chatInitiated,
+      chatInitiatedAt: values.chatInitiated
+        ? (editingEntry.chatInitiatedAt ?? new Date().toISOString())
+        : undefined,
     };
     setSaving(true);
     dbSaveEntry(updatedEntry).then(() => {
