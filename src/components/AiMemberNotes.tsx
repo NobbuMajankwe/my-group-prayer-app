@@ -29,12 +29,9 @@ export default function AiMemberNotes({ memberName, recentRequests, onAccept }: 
       if (errors?.length) throw new Error(errors[0].message);
       setNote(data?.note ?? '');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
-      setError(
-        msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
-          ? 'AI is still initialising — try again in a moment.'
-          : msg || 'Suggestion failed',
-      );
+      const msg = e instanceof Error ? e.message : 'Suggestion failed';
+      console.error('[AiMemberNotes]', e);
+      setError(msg);
     } finally {
       setLoading(false);
     }

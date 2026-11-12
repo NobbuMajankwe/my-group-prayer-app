@@ -26,12 +26,9 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
       if (errors?.length) throw new Error(errors[0].message);
       setSuggestion(data?.action ?? '');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
-      setError(
-        msg.toLowerCase().includes('mapping template') || msg.toLowerCase().includes('not configured')
-          ? 'AI is still initialising — try again in a moment.'
-          : msg || 'AI suggestion failed',
-      );
+      const msg = e instanceof Error ? e.message : 'AI suggestion failed';
+      console.error('[AiActionSuggest]', e);
+      setError(msg);
     } finally {
       setLoading(false);
     }
