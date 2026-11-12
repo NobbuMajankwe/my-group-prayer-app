@@ -7,6 +7,11 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
  * Public read is off; all operations require auth.
  * We use API_KEY auth for now (simplest for a team app without Cognito).
  */
+
+// Claude 4.5 Haiku — raw Bedrock model ID (friendly name not yet in @aws-amplify/backend types).
+// See: https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-haiku-4-5.html
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const AI_MODEL = 'anthropic.claude-haiku-4-5-20251001-v1:0' as any;
 const schema = a.schema({
   Leader: a
     .model({
@@ -62,7 +67,7 @@ const schema = a.schema({
   // Feature 1: one-shot follow-up action suggester (used in EntryForm)
   PrayerAssistant: a
     .generation({
-      aiModel: a.ai.model('Claude 3.5 Haiku'),
+      aiModel: a.ai.model(AI_MODEL),
       systemPrompt:
         'You are a pastoral care assistant for a small group leader. ' +
         'Given a prayer request, suggest one brief, warm, practical follow-up action ' +
@@ -75,7 +80,7 @@ const schema = a.schema({
   // Feature 2: one-shot summary of all prayer requests for a leader (used in ReviewStatusDashboard)
   PrayerSummary: a
     .generation({
-      aiModel: a.ai.model('Claude 3.5 Haiku'),
+      aiModel: a.ai.model(AI_MODEL),
       systemPrompt:
         'You are a pastoral care assistant. Summarise the following prayer requests ' +
         'into a concise pastoral overview (3-5 sentences) suitable for a leader meeting. ' +
@@ -88,7 +93,7 @@ const schema = a.schema({
   // Feature 3: smart pastoral note suggestion for a member (used in MembersDialog)
   MemberNoteSuggestion: a
     .generation({
-      aiModel: a.ai.model('Claude 3.5 Haiku'),
+      aiModel: a.ai.model(AI_MODEL),
       systemPrompt:
         'You are a pastoral care assistant. Given recent prayer requests for a group member, ' +
         'write a short pastoral note (1-2 sentences) a leader can save about that member. ' +
