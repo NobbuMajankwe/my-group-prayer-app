@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Avatar, Box, Button, Divider, Drawer, IconButton,
   List, ListItemButton, ListItemIcon, ListItemText,
-  Tooltip, Typography, alpha,
+  Tab, Tabs, Tooltip, Typography, alpha,
 } from '@mui/material';
 import DownloadIcon        from '@mui/icons-material/FileDownloadOutlined';
 import GroupIcon           from '@mui/icons-material/PeopleAltOutlined';
@@ -16,6 +16,8 @@ import PeopleOutlinedIcon  from '@mui/icons-material/PeopleOutlined';
 import MenuIcon            from '@mui/icons-material/MenuOutlined';
 import CloseIcon           from '@mui/icons-material/CloseOutlined';
 import LockOutlinedIcon    from '@mui/icons-material/LockOutlined';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
+import ListAltOutlinedIcon  from '@mui/icons-material/ListAltOutlined';
 import type { ReviewEntry, LeaderPerson } from '../types/ReviewEntry';
 import { generateReviewsPdf }             from '../utils/pdfGenerator';
 
@@ -72,11 +74,15 @@ function ToolbarIcon({
   );
 }
 
+export type AppTab = 'new' | 'reviews';
+
 interface HeaderProps {
   entries:         ReviewEntry[];
   currentLeader:   LeaderPerson;
   auditCount:      number;
   memberCount:     number;
+  activeTab:       AppTab;
+  onTabChange:     (tab: AppTab) => void;
   onEditLeaders:   () => void;
   onManageMembers: () => void;
   onShowLog:       () => void;
@@ -86,7 +92,7 @@ interface HeaderProps {
 }
 
 export default function Header({
-  entries, currentLeader, auditCount, memberCount,
+  entries, currentLeader, auditCount, memberCount, activeTab, onTabChange,
   onEditLeaders, onManageMembers, onShowLog, onShowStatus, onProfile, onLogout,
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -432,15 +438,37 @@ export default function Header({
         </List>
       </Drawer>
 
-      {/* Gradient divider */}
-      <Box
-        sx={{
-          mt: { xs: 2.5, sm: 3 },
-          height: 2,
-          borderRadius: 1,
-          background: 'linear-gradient(90deg, #7c3aed44 0%, #db277744 50%, #7c3aed22 100%)',
-        }}
-      />
+      {/* Tabs */}
+      <Box sx={{ mt: { xs: 2, sm: 2.5 }, borderBottom: '1px solid', borderColor: alpha('#7c3aed', 0.12) }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, v) => onTabChange(v as AppTab)}
+          sx={{
+            minHeight: 40,
+            '& .MuiTab-root': {
+              minHeight: 40, textTransform: 'none', fontWeight: 600,
+              fontSize: '0.875rem', px: 2,
+            },
+            '& .MuiTabs-indicator': {
+              background: 'linear-gradient(90deg, #7c3aed, #db2777)',
+              height: 3, borderRadius: '3px 3px 0 0',
+            },
+          }}
+        >
+          <Tab
+            value="new"
+            label="New Entry"
+            icon={<AddCircleOutlineIcon sx={{ fontSize: 17 }} />}
+            iconPosition="start"
+          />
+          <Tab
+            value="reviews"
+            label={`Reviews${entries.length > 0 ? ` (${entries.length})` : ''}`}
+            icon={<ListAltOutlinedIcon sx={{ fontSize: 17 }} />}
+            iconPosition="start"
+          />
+        </Tabs>
+      </Box>
     </Box>
   );
 }

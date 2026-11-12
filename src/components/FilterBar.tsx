@@ -11,36 +11,56 @@ import {
   Typography,
   alpha,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/SearchOutlined';
+import SearchIcon    from '@mui/icons-material/SearchOutlined';
 import FilterListIcon from '@mui/icons-material/FilterListOutlined';
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon     from '@mui/icons-material/Close';
+import CalendarIcon  from '@mui/icons-material/CalendarTodayOutlined';
 import type { LeaderPerson, LeaderRole, RevieweeRole } from '../types/ReviewEntry';
 
 export interface FilterState {
   search:       string;
-  reviewer:     string;   // '' = all
+  reviewer:     string;
   leaderRole:   LeaderRole | '';
   revieweeRole: RevieweeRole | '';
+  week:         string; // ISO week start date (Monday), '' = all
 }
 
 export const EMPTY_FILTERS: FilterState = {
-  search: '', reviewer: '', leaderRole: '', revieweeRole: '',
+  search: '', reviewer: '', leaderRole: '', revieweeRole: '', week: '',
 };
 
 export function isFilterActive(f: FilterState): boolean {
-  return !!(f.search || f.reviewer || f.leaderRole || f.revieweeRole);
+  return !!(f.search || f.reviewer || f.leaderRole || f.revieweeRole || f.week);
+}
+
+/** Returns the Monday of the ISO week containing `date` as YYYY-MM-DD */
+export function getWeekStart(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Label for a week: "Mon DD MMM" */
+function weekLabel(isoMonday: string): string {
+  const d = new Date(isoMonday + 'T00:00:00');
+  const sun = new Date(d); sun.setDate(d.getDate() + 6);
+  const fmt = (x: Date) => x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `${fmt(d)} – ${fmt(sun)}`;
 }
 
 interface FilterBarProps {
-  filters: FilterState;
-  leaders: LeaderPerson[];
-  totalCount: number;
+  filters:       FilterState;
+  leaders:       LeaderPerson[];
+  totalCount:    number;
   filteredCount: number;
-  onChange: (filters: FilterState) => void;
+  weekOptions:   string[]; // sorted ISO Monday dates
+  onChange:      (filters: FilterState) => void;
 }
 
 export default function FilterBar({
-  filters, leaders, totalCount, filteredCount, onChange,
+  filters, leaders, totalCount, filteredCount, weekOptions, onChange,
 }: FilterBarProps) {
   const set = (partial: Partial<FilterState>) => onChange({ ...filters, ...partial });
   const active = isFilterActive(filters);
@@ -86,7 +106,7 @@ export default function FilterBar({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr 1fr' },
+          gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr 1fr 1fr' },
           gap: 1.5,
           p: 2,
           borderRadius: 3,
@@ -120,6 +140,26 @@ export default function FilterBar({
             },
           }}
         />
+
+        {/* Week */}
+        <FormControl size="small">
+          <InputLabel id="filter-week">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <CalendarIcon sx={{ fontSize: 14 }} /> Week
+            </Box>
+          </InputLabel>
+          <Select
+            labelId="filter-week"
+            label="Week"
+            value={filters.week}
+            onChange={(e) => set({ week: e.target.value })}
+          >
+            <MenuItem value=""><em>All time</em></MenuItem>
+            {weekOptions.map((w) => (
+              <MenuItem key={w} value={w}>{weekLabel(w)}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         {/* Reviewer */}
         <FormControl size="small">

@@ -19,6 +19,7 @@ import {
 } from './utils/db';
 
 import Header              from './components/Header';
+import type { AppTab }     from './components/Header';
 import EntryForm           from './components/EntryForm';
 import type { EntryFormValues } from './components/EntryForm';
 import EntryList           from './components/EntryList';
@@ -26,6 +27,7 @@ import type { ViewMode }   from './components/EntryList';
 import FilterBar           from './components/FilterBar';
 import type { FilterState } from './components/FilterBar';
 import { EMPTY_FILTERS }   from './components/FilterBar';
+import { getWeekStart }    from './components/FilterBar';
 import DeleteConfirmationDialog from './components/DeleteConfirmationDialog';
 import LeaderSetup         from './components/LeaderSetup';
 import LeaderLogin         from './components/LeaderLogin';
@@ -156,6 +158,10 @@ function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
     if (f.reviewer     && e.leaderName   !== f.reviewer)     return false;
     if (f.leaderRole   && e.leaderRole   !== f.leaderRole)   return false;
     if (f.revieweeRole && e.revieweeRole !== f.revieweeRole) return false;
+    if (f.week) {
+      const entryWeek = getWeekStart(new Date(e.createdAt));
+      if (entryWeek !== f.week) return false;
+    }
     return true;
   });
 }
@@ -228,6 +234,7 @@ export default function App() {
   const [editingEntry,    setEditingEntry]     = useState<ReviewEntry | null>(null);
   const [deleteTarget,    setDeleteTarget]     = useState<ReviewEntry | null>(null);
   const [snackbar,        setSnackbar]         = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
+  const [activeTab,       setActiveTab]        = useState<AppTab>('new');
 
   // ── Derived ───────────────────────────────────────────────────────────
   const filteredEntries = useMemo(
@@ -240,6 +247,12 @@ export default function App() {
     () => currentLeader ? getReminders(entries, currentLeader.name) : [],
     [entries, currentLeader]
   );
+
+  // Unique week-start dates from all entries, newest first
+  const weekOptions = useMemo(() => {
+    const weeks = new Set(entries.map((e) => getWeekStart(new Date(e.createdAt))));
+    return Array.from(weeks).sort((a, b) => b.localeCompare(a));
+  }, [entries]);
 
   // ── Helpers ───────────────────────────────────────────────────────────
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
@@ -399,6 +412,7 @@ export default function App() {
         `Entry added for "${entry.revieweeName}" by ${entry.leaderName}.`,
         currentLeader?.name);
       showSnackbar('Entry added successfully.');
+      setActiveTab('reviews');
     }).finally(() => setSaving(false));
   };
 
@@ -449,6 +463,7 @@ export default function App() {
 
   const handleStartEdit = (entry: ReviewEntry) => {
     setEditingEntry(entry);
+    setActiveTab('new');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -543,6 +558,8 @@ export default function App() {
             currentLeader={currentLeader}
             auditCount={auditLog.length}
             memberCount={members.length}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             onEditLeaders={() => setEditLeadersOpen(true)}
             onManageMembers={() => setMembersOpen(true)}
             onShowLog={() => setAuditDrawerOpen(true)}
@@ -569,37 +586,42 @@ export default function App() {
             />
           )}
 
-          {/* Entry form — stays narrow in grid mode */}
-          <Box sx={{ maxWidth: viewMode === 'grid' ? 640 : 'none', mx: viewMode === 'grid' ? 'auto' : 0 }}>
-            <EntryForm
-              leaders={leaders}
-              members={members}
-              currentLeader={currentLeader}
-              onSubmit={handleFormSubmit}
-              editingEntry={editingEntry}
-              onCancelEdit={() => setEditingEntry(null)}
-              saving={saving}
-            />
-          </Box>
+          {/* Entry form — only on New Entry tab */}
+          {activeTab === 'new' && (
+            <Box sx={{ maxWidth: viewMode === 'grid' ? 640 : 'none', mx: viewMode === 'grid' ? 'auto' : 0, mt: 3 }}>
+              <EntryForm
+                leaders={leaders}
+                members={members}
+                currentLeader={currentLeader}
+                onSubmit={handleFormSubmit}
+                editingEntry={editingEntry}
+                onCancelEdit={() => setEditingEntry(null)}
+                saving={saving}
+              />
+            </Box>
+          )}
 
-          {/* Filters */}
-          <FilterBar
-            filters={filters}
-            leaders={leaders}
-            totalCount={entries.length}
-            filteredCount={filteredEntries.length}
-            onChange={setFilters}
-          />
-
-          {/* Entry list */}
-          <EntryList
-            entries={filteredEntries}
-            viewMode={viewMode}
-            onViewChange={handleViewChange}
-            onEdit={handleStartEdit}
-            onDelete={setDeleteTarget}
-            onToggleAction={handleToggleAction}
-          />
+          {/* Filters + list — only on Reviews tab */}
+          {activeTab === 'reviews' && (
+            <Box sx={{ mt: 3 }}>
+              <FilterBar
+                filters={filters}
+                leaders={leaders}
+                totalCount={entries.length}
+                filteredCount={filteredEntries.length}
+                weekOptions={weekOptions}
+                onChange={setFilters}
+              />
+              <EntryList
+                entries={filteredEntries}
+                viewMode={viewMode}
+                onViewChange={handleViewChange}
+                onEdit={handleStartEdit}
+                onDelete={setDeleteTarget}
+                onToggleAction={handleToggleAction}
+              />
+            </Box>
+          )}
 
         </Box>
       </Box>
@@ -637,6 +659,7 @@ export default function App() {
         members={members}
         currentLeader={currentLeader}
         onToggleAction={handleToggleAction}
+        onEditMember={() => { setStatusOpen(false); setMembersOpen(true); }}
         onClose={() => setStatusOpen(false)}
       />
 
