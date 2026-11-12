@@ -149,26 +149,8 @@ function loadViewMode(): ViewMode {
 function getScopedEntries(
   entries: ReviewEntry[],
   leader: LeaderPerson,
-  members: Member[],
-  leaders: LeaderPerson[],
 ): ReviewEntry[] {
-  if (leader.role === 'core') {
-    const myMemberIds   = new Set(members.filter((m) => m.assignedCore === leader.id).map((m) => m.id));
-    const myMemberNames = new Set(members.filter((m) => m.assignedCore === leader.id).map((m) => m.name.toLowerCase()));
-    return entries.filter((e) =>
-      (e.memberId && myMemberIds.has(e.memberId)) ||
-      myMemberNames.has(e.revieweeName.toLowerCase()),
-    );
-  }
-  const myMemberIds   = new Set(members.filter((m) => m.assignedLeader === leader.id).map((m) => m.id));
-  const myMemberNames = new Set(members.filter((m) => m.assignedLeader === leader.id).map((m) => m.name.toLowerCase()));
-  const myCoreIds     = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.id).map((l) => l.id));
-  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.id).map((l) => l.name.toLowerCase()));
-  return entries.filter((e) =>
-    (e.memberId && myMemberIds.has(e.memberId)) ||
-    myMemberNames.has(e.revieweeName.toLowerCase()) ||
-    (e.revieweeRole === 'core' && (e.leaderId ? myCoreIds.has(e.leaderId) : myCoreNames.has(e.revieweeName.toLowerCase()))),
-  );
+  return entries.filter((e) => e.leaderId === leader.id);
 }
 
 function applyFilters(entries: ReviewEntry[], f: FilterState): ReviewEntry[] {
@@ -263,8 +245,8 @@ export default function App() {
 
   // ── Derived ───────────────────────────────────────────────────────────
   const scopedEntries = useMemo(
-    () => currentLeader ? getScopedEntries(entries, currentLeader, members, leaders) : entries,
-    [entries, currentLeader, members, leaders],
+    () => currentLeader ? getScopedEntries(entries, currentLeader) : entries,
+    [entries, currentLeader],
   );
 
   const filteredEntries = useMemo(
@@ -645,7 +627,7 @@ export default function App() {
               <FilterBar
                 filters={filters}
                 leaders={leaders}
-                totalCount={entries.length}
+                totalCount={scopedEntries.length}
                 filteredCount={filteredEntries.length}
                 weekOptions={weekOptions}
                 onChange={setFilters}
