@@ -574,6 +574,7 @@ export default function App() {
             <EntryForm
               leaders={leaders}
               members={members}
+              currentLeader={currentLeader}
               onSubmit={handleFormSubmit}
               editingEntry={editingEntry}
               onCancelEdit={() => setEditingEntry(null)}

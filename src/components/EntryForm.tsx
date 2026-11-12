@@ -7,8 +7,8 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   FormControl,
-  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -35,12 +35,13 @@ export interface EntryFormValues {
 }
 
 interface EntryFormProps {
-  leaders:       LeaderPerson[];
-  members:       Member[];
-  onSubmit:      (values: EntryFormValues) => void;
-  editingEntry?: ReviewEntry | null;
-  onCancelEdit?: () => void;
-  saving?:       boolean;
+  leaders:        LeaderPerson[];
+  members:        Member[];
+  currentLeader:  LeaderPerson;
+  onSubmit:       (values: EntryFormValues) => void;
+  editingEntry?:  ReviewEntry | null;
+  onCancelEdit?:  () => void;
+  saving?:        boolean;
 }
 
 const EMPTY: EntryFormValues = {
@@ -54,16 +55,15 @@ const MEMBER_COL = '#5b21b6';
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function EntryForm({
-  leaders, members, onSubmit, editingEntry, onCancelEdit, saving,
+  leaders, members, currentLeader, onSubmit, editingEntry, onCancelEdit, saving,
 }: EntryFormProps) {
   const {
-    register, handleSubmit, reset, watch, control, setValue,
+    register, handleSubmit, reset, control, setValue,
     formState: { errors },
   } = useForm<EntryFormValues>({ defaultValues: EMPTY });
 
-  const selectedLeaderName = watch('leaderName');
-  const selectedLeader     = leaders.find((l) => l.name === selectedLeaderName);
-  const isLeader           = selectedLeader?.role === 'leader';
+  const selectedLeaderName = currentLeader.name;
+  const isLeader           = currentLeader.role === 'leader';
 
   // Members visible to the selected reviewer:
   //   • Leader → all members assigned to that leader
@@ -76,10 +76,11 @@ export default function EntryForm({
     return members.filter((m) => m.assignedCore === selectedLeaderName);
   }, [selectedLeaderName, isLeader, members]);
 
-  // When reviewer changes, reset revieweeRole for non-leaders and clear participant
+  // Lock leaderName to current leader always
   useEffect(() => {
+    setValue('leaderName', currentLeader.name);
     if (!isLeader) setValue('revieweeRole', 'member');
-  }, [isLeader, setValue]);
+  }, [currentLeader.name, isLeader, setValue]);
 
   // Populate form when editing
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function EntryForm({
 
   const handleFormSubmit = (values: EntryFormValues) => {
     onSubmit(values);
-    if (!editingEntry) reset(EMPTY);
+    if (!editingEntry) reset({ ...EMPTY, leaderName: currentLeader.name });
   };
 
   const isEditing = Boolean(editingEntry);
@@ -168,40 +169,30 @@ export default function EntryForm({
         >
           {/* ── Reviewer + Role row ───────────────────────────────── */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: isLeader ? '1fr 1fr' : '1fr' }, gap: 2 }}>
-            {/* Reviewer */}
-            <Controller
-              name="leaderName"
-              control={control}
-              rules={{ required: 'Please select a reviewer.' }}
-              render={({ field }) => (
-                <FormControl fullWidth error={Boolean(errors.leaderName)}>
-                  <InputLabel id="leader-label">Reviewer</InputLabel>
-                  <Select {...field} labelId="leader-label" label="Reviewer"
-                    onChange={(e) => {
-                      field.onChange(e);
-                      setValue('revieweeName', '');
-                      setValue('memberId', undefined);
-                    }}>
-                    {leaders.map((l) => (
-                      <MenuItem key={l.name} value={l.name}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {l.role === 'leader'
-                            ? <StarOutlinedIcon   sx={{ fontSize: 14, color: '#eab308' }} />
-                            : <GroupsOutlinedIcon sx={{ fontSize: 14, color: '#14b8a6' }} />}
-                          {l.displayName || l.name}
-                          <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>
-                            {l.role === 'leader' ? 'Leader' : 'Core'}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    {errors.leaderName?.message ?? 'Who is conducting this review?'}
-                  </FormHelperText>
-                </FormControl>
-              )}
-            />
+            {/* Reviewer — read-only, always the signed-in user */}
+            <Box sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 1.5, py: 1.25, borderRadius: 2.5,
+              border: '1px solid', borderColor: alpha('#7c3aed', 0.15),
+              bgcolor: alpha('#7c3aed', 0.03),
+            }}>
+              {currentLeader.role === 'leader'
+                ? <StarOutlinedIcon   sx={{ fontSize: 15, color: '#eab308', flexShrink: 0 }} />
+                : <GroupsOutlinedIcon sx={{ fontSize: 15, color: '#14b8a6', flexShrink: 0 }} />}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', lineHeight: 1.2 }}>Reviewer</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                  {currentLeader.displayName || currentLeader.name}
+                </Typography>
+              </Box>
+              <Chip
+                label={currentLeader.role === 'leader' ? 'Leader' : 'Core'}
+                size="small"
+                sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700,
+                  bgcolor: currentLeader.role === 'leader' ? 'rgba(234,179,8,0.10)' : 'rgba(20,184,166,0.10)',
+                  color:   currentLeader.role === 'leader' ? '#92400e' : '#0f766e' }}
+              />
+            </Box>
 
             {/* Reviewee role (leaders only) */}
             {isLeader && (
@@ -215,9 +206,6 @@ export default function EntryForm({
                       <MenuItem value="member">Member</MenuItem>
                       <MenuItem value="core">Core / Intern</MenuItem>
                     </Select>
-                    <FormHelperText>
-                      Leaders can review both members and core/interns.
-                    </FormHelperText>
                   </FormControl>
                 )}
               />
