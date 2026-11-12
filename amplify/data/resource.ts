@@ -62,7 +62,7 @@ const schema = a.schema({
   // Feature 1: one-shot follow-up action suggester (used in EntryForm)
   PrayerAssistant: a
     .generation({
-      aiModel: a.ai.model('Claude 3 Haiku'),
+      aiModel: a.ai.model('Claude 3.5 Haiku'),
       systemPrompt:
         'You are a pastoral care assistant for a small group leader. ' +
         'Given a prayer request, suggest one brief, warm, practical follow-up action ' +
@@ -75,7 +75,7 @@ const schema = a.schema({
   // Feature 2: one-shot summary of all prayer requests for a leader (used in ReviewStatusDashboard)
   PrayerSummary: a
     .generation({
-      aiModel: a.ai.model('Claude 3 Haiku'),
+      aiModel: a.ai.model('Claude 3.5 Haiku'),
       systemPrompt:
         'You are a pastoral care assistant. Summarise the following prayer requests ' +
         'into a concise pastoral overview (3-5 sentences) suitable for a leader meeting. ' +
@@ -88,7 +88,7 @@ const schema = a.schema({
   // Feature 3: smart pastoral note suggestion for a member (used in MembersDialog)
   MemberNoteSuggestion: a
     .generation({
-      aiModel: a.ai.model('Claude 3 Haiku'),
+      aiModel: a.ai.model('Claude 3.5 Haiku'),
       systemPrompt:
         'You are a pastoral care assistant. Given recent prayer requests for a group member, ' +
         'write a short pastoral note (1-2 sentences) a leader can save about that member. ' +
