@@ -8,12 +8,9 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
  * We use API_KEY auth for now (simplest for a team app without Cognito).
  */
 
-// Claude 4.5 Haiku — cross-region inference profile ID (required for Converse API).
-// The Amplify AI Kit uses Bedrock's Converse API, which requires the inference
-// profile ID (with region prefix), not the base model ID.
-// See: https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-haiku-4-5.html
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const AI_MODEL = 'us.anthropic.claude-haiku-4-5-20251001-v1:0' as any;
+// Claude Haiku 4.5 — the Amplify AI Kit maps this to the global inference profile
+// ID 'global.anthropic.claude-haiku-4-5-20251001-v1:0' automatically.
+const AI_MODEL = 'Claude Haiku 4.5';
 const schema = a.schema({
   Leader: a
     .model({
