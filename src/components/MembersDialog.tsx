@@ -16,7 +16,9 @@ import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import StarOutlinedIcon   from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import CsvImportPanel     from './CsvImportPanel';
+import AiMemberNotes     from './AiMemberNotes';
 import type { Member, LeaderPerson } from '../types/ReviewEntry';
+import type { ReviewEntry } from '../types/ReviewEntry';
 
 // ── Colour helpers ─────────────────────────────────────────────────────────
 
@@ -49,6 +51,7 @@ interface MembersDialogProps {
   open:           boolean;
   members:        Member[];
   leaders:        LeaderPerson[];
+  entries:        ReviewEntry[];
   onSave:         (members: Member[]) => void;
   onClose:        () => void;
   saving?:        boolean;
@@ -57,7 +60,7 @@ interface MembersDialogProps {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function MembersDialog({
-  open, members, leaders, onSave, onClose, saving,
+  open, members, leaders, entries, onSave, onClose, saving,
 }: MembersDialogProps) {
   const [list,       setList]       = useState<Member[]>(members);
   const [draft,      setDraft]      = useState<MemberDraft>(EMPTY_DRAFT);
@@ -418,6 +421,16 @@ export default function MembersDialog({
                 value={draft.notes}
                 onChange={(e) => setD({ notes: e.target.value })}
                 placeholder="Any helpful context about this member…"
+              />
+
+              {/* AI note suggestion */}
+              <AiMemberNotes
+                memberName={draft.name}
+                recentRequests={entries
+                  .filter((e) => e.revieweeName.toLowerCase() === draft.name.trim().toLowerCase() && e.prayerRequest?.trim())
+                  .slice(0, 5)
+                  .map((e) => e.prayerRequest)}
+                onAccept={(note) => setD({ notes: note })}
               />
 
               {/* Form actions */}

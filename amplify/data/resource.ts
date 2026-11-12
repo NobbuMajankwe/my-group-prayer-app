@@ -55,6 +55,45 @@ const schema = a.schema({
       timestamp:   a.string().required(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
+
+  // ── Amplify AI routes ──────────────────────────────────────────────────
+
+  // Feature 1: conversational follow-up action suggester (used in EntryForm)
+  PrayerAssistant: a
+    .conversation({
+      aiModel: a.ai.model('Claude 3 Haiku'),
+      systemPrompt:
+        'You are a pastoral care assistant for a small group leader. ' +
+        'Given a prayer request, suggest one brief, warm, practical follow-up action ' +
+        'the leader can take. Reply with 1-2 sentences only — no preamble, no bullet points.',
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+
+  // Feature 2: one-shot summary of all prayer requests for a leader (used in ReviewStatusDashboard)
+  PrayerSummary: a
+    .generation({
+      aiModel: a.ai.model('Claude 3 Haiku'),
+      systemPrompt:
+        'You are a pastoral care assistant. Summarise the following prayer requests ' +
+        'into a concise pastoral overview (3-5 sentences) suitable for a leader meeting. ' +
+        'Highlight any recurring themes or urgent needs without naming individuals.',
+    })
+    .arguments({ requests: a.string().required() })
+    .returns(a.customType({ summary: a.string() }))
+    .authorization((allow) => [allow.publicApiKey()]),
+
+  // Feature 3: smart pastoral note suggestion for a member (used in MembersDialog)
+  MemberNoteSuggestion: a
+    .generation({
+      aiModel: a.ai.model('Claude 3 Haiku'),
+      systemPrompt:
+        'You are a pastoral care assistant. Given recent prayer requests for a group member, ' +
+        'write a short pastoral note (1-2 sentences) a leader can save about that member. ' +
+        'Be warm, practical, and concise.',
+    })
+    .arguments({ memberName: a.string().required(), recentRequests: a.string().required() })
+    .returns(a.customType({ note: a.string() }))
+    .authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

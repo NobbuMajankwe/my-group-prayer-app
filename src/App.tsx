@@ -685,6 +685,7 @@ export default function App() {
         open={membersOpen}
         members={members}
         leaders={leaders}
+        entries={entries}
         onSave={handleMembersSave}
         onClose={() => setMembersOpen(false)}
         saving={saving}

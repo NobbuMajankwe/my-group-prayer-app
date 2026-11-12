@@ -13,6 +13,7 @@ import PrayerIcon        from '@mui/icons-material/VolunteerActivism';
 import StarOutlinedIcon  from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import type { LeaderPerson, Member, ReviewEntry, RevieweeRole } from '../types/ReviewEntry';
+import AiActionSuggest from './AiActionSuggest';
 
 export interface EntryFormValues {
   leaderName:     string;
@@ -291,14 +292,20 @@ export default function EntryForm({
               helperText={errors.prayerRequest?.message ?? (chatInitiated ? 'Optional — add once they share it' : 'What did they share?')}
               {...register('prayerRequest', { required: chatInitiated ? false : 'Prayer request is required.' })}
             />
-            <TextField
-              label="Planned action / follow-up"
-              fullWidth multiline rows={4}
-              required={!chatInitiated}
-              error={Boolean(errors.plannedAction)}
-              helperText={errors.plannedAction?.message ?? (chatInitiated ? 'Optional — add once you know the follow-up' : "What's the follow-up?")}
-              {...register('plannedAction', { required: chatInitiated ? false : 'Planned action is required.' })}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <TextField
+                label="Planned action / follow-up"
+                fullWidth multiline rows={4}
+                required={!chatInitiated}
+                error={Boolean(errors.plannedAction)}
+                helperText={errors.plannedAction?.message ?? (chatInitiated ? 'Optional — add once you know the follow-up' : "What's the follow-up?")}
+                {...register('plannedAction', { required: chatInitiated ? false : 'Planned action is required.' })}
+              />
+              <AiActionSuggest
+                prayerRequest={watch('prayerRequest')}
+                onAccept={(s) => setValue('plannedAction', s, { shouldValidate: true })}
+              />
+            </Box>
           </Box>
 
           {/* Status indicator when chat-only */}

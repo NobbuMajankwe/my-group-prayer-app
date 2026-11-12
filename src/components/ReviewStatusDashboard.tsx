@@ -11,6 +11,7 @@ import GroupsOutlinedIcon       from '@mui/icons-material/GroupsOutlined';
 import AccessTimeIcon           from '@mui/icons-material/AccessTimeOutlined';
 import EditOutlinedIcon         from '@mui/icons-material/EditOutlined';
 import type { ReviewEntry, Member, LeaderPerson } from '../types/ReviewEntry';
+import AiSummaryButton from './AiSummaryButton';
 
 const MEMBER_BG  = 'rgba(124,58,237,0.08)';
 const MEMBER_COL = '#5b21b6';
@@ -191,6 +192,16 @@ export default function ReviewStatusDashboard({
 
       {/* Body */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2 }}>
+        {/* AI pastoral overview */}
+        {myEntries.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <AiSummaryButton
+              requests={myEntries
+                .filter((e) => e.prayerRequest?.trim())
+                .map((e) => e.prayerRequest)}
+            />
+          </Box>
+        )}
         {statuses.length === 0 ? (
           <Box sx={{ textAlign: 'center', pt: 8, color: 'text.disabled' }}>
             <Typography variant="body2">No reviews or members assigned to you yet.</Typography>
