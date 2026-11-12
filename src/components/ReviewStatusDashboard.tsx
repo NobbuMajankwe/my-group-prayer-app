@@ -39,19 +39,40 @@ export default function ReviewStatusDashboard({
   open, entries, members, currentLeader, onToggleAction, onEditMember, onClose,
 }: ReviewStatusDashboardProps) {
 
-  // All entries written by the current leader
-  const myEntries = useMemo(
-    () => entries.filter((e) => e.leaderName === currentLeader.name),
-    [entries, currentLeader.name],
-  );
-
-  // Members assigned to this leader (for "never reviewed" rows)
+  // Members assigned to this leader/core (for "never reviewed" rows)
   const myMembers = useMemo(() => {
     if (currentLeader.role === 'leader') {
       return members.filter((m) => m.assignedLeader === currentLeader.name);
     }
     return members.filter((m) => m.assignedCore === currentLeader.name);
   }, [members, currentLeader]);
+
+  // IDs of members in scope
+  const myMemberIds = useMemo(
+    () => new Set(myMembers.map((m) => m.id)),
+    [myMembers],
+  );
+  const myMemberNames = useMemo(
+    () => new Set(myMembers.map((m) => m.name.toLowerCase())),
+    [myMembers],
+  );
+
+  // All entries relevant to this leader:
+  // - entries they wrote themselves, OR
+  // - for leaders: entries written by any reviewer about a member assigned to this leader
+  const myEntries = useMemo(() => {
+    return entries.filter((e) => {
+      if (e.leaderName === currentLeader.name) return true;
+      if (currentLeader.role === 'leader') {
+        // include entries about members assigned to this leader, regardless of who reviewed them
+        return (
+          (e.memberId && myMemberIds.has(e.memberId)) ||
+          myMemberNames.has(e.revieweeName.toLowerCase())
+        );
+      }
+      return false;
+    });
+  }, [entries, currentLeader, myMemberIds, myMemberNames]);
 
   // Build one status row per unique reviewee
   const statuses: RevieweeStatus[] = useMemo(() => {
@@ -259,6 +280,11 @@ export default function ReviewStatusDashboard({
                       <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.6 }}>
                         {lastReview.plannedAction}
                       </Typography>
+                      {lastReview.leaderName !== currentLeader.name && (
+                        <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+                          Reviewed by {lastReview.leaderName}
+                        </Typography>
+                      )}
                     </Box>
 
                     <Button
