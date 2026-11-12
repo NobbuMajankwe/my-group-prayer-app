@@ -423,13 +423,13 @@ export default function App() {
   // ── Entry handlers ────────────────────────────────────────────────────
 
   const handleAddEntry = (values: EntryFormValues) => {
-    const reviewer = leaders.find((l) => l.id === values.leaderId);
+    if (!currentLeader) return;
     const now = new Date().toISOString();
     const entry: ReviewEntry = {
       id:             uuidv4(),
-      leaderId:       reviewer?.id ?? values.leaderId,
-      leaderName:     reviewer ? (reviewer.displayName || reviewer.name) : '',
-      leaderRole:     reviewer?.role ?? 'core',
+      leaderId:       currentLeader.id,
+      leaderName:     currentLeader.displayName || currentLeader.name,
+      leaderRole:     currentLeader.role,
       revieweeName:   values.revieweeName.trim(),
       revieweeRole:   values.revieweeRole,
       memberId:       values.memberId,
@@ -444,20 +444,19 @@ export default function App() {
       setEntries((prev) => [entry, ...prev]);
       addLog('entry_added',
         `${values.chatInitiated ? 'Chat initiated' : 'Prayer request logged'} for "${entry.revieweeName}" by ${entry.leaderName}.`,
-        currentLeader?.name);
+        currentLeader.name);
       showSnackbar(values.chatInitiated ? 'Chat logged — edit to add the prayer request later.' : 'Prayer request logged.');
       setActiveTab('reviews');
     }).finally(() => setSaving(false));
   };
 
   const handleEditEntry = (values: EntryFormValues) => {
-    if (!editingEntry) return;
-    const reviewer = leaders.find((l) => l.id === values.leaderId);
+    if (!editingEntry || !currentLeader) return;
     const updatedEntry: ReviewEntry = {
       ...editingEntry,
-      leaderId:      reviewer?.id ?? editingEntry.leaderId,
-      leaderName:    reviewer ? (reviewer.displayName || reviewer.name) : editingEntry.leaderName,
-      leaderRole:    reviewer?.role ?? editingEntry.leaderRole,
+      leaderId:      currentLeader.id,
+      leaderName:     currentLeader.displayName || currentLeader.name,
+      leaderRole:     currentLeader.role,
       revieweeName:  values.revieweeName.trim(),
       revieweeRole:  values.revieweeRole,
       memberId:      values.memberId,
@@ -473,8 +472,8 @@ export default function App() {
       setEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updatedEntry : e));
       setEditingEntry(null);
       addLog('entry_edited',
-        `Entry for "${values.revieweeName.trim()}" updated by ${reviewer ? (reviewer.displayName || reviewer.name) : ''}.`,
-        currentLeader?.name);
+        `Entry for "${values.revieweeName.trim()}" updated by ${currentLeader.displayName || currentLeader.name}.`,
+        currentLeader.name);
       showSnackbar('Entry updated successfully.');
     }).finally(() => setSaving(false));
   };
