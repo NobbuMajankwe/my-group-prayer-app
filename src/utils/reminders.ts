@@ -62,13 +62,13 @@ export interface ReminderItem {
 
 /** Returns entries the leader reviewed that are ≥ SNOOZE_DAYS old */
 export function getOverdueItems(
-  entries:    ReviewEntry[],
-  leaderName: string,
+  entries:  ReviewEntry[],
+  leaderId: string,
 ): ReminderItem[] {
   const now    = Date.now();
   const cutoff = SNOOZE_DAYS * 24 * 60 * 60 * 1000;
   return entries
-    .filter((e) => e.leaderName === leaderName && now - new Date(e.createdAt).getTime() >= cutoff)
+    .filter((e) => (e.leaderId ? e.leaderId === leaderId : e.leaderName === leaderId) && now - new Date(e.createdAt).getTime() >= cutoff)
     .map((e) => ({
       entry:   e,
       daysOld: Math.floor((now - new Date(e.createdAt).getTime()) / (24 * 60 * 60 * 1000)),
@@ -77,16 +77,16 @@ export function getOverdueItems(
 }
 
 /** True if the reminder should be shown right now for this leader */
-export function reminderIsDue(leaderName: string): boolean {
-  const until = getSnoozeUntil(leaderName);
+export function reminderIsDue(leaderId: string): boolean {
+  const until = getSnoozeUntil(leaderId);
   if (!until) return true;
   return new Date() > until;
 }
 
 /** Snooze the reminder for SNOOZE_DAYS */
-export function snoozeReminder(leaderName: string): Date {
+export function snoozeReminder(leaderId: string): Date {
   const until = new Date(Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000);
-  saveSnoozeForLeader(leaderName, until);
+  saveSnoozeForLeader(leaderId, until);
   return until;
 }
 
@@ -135,20 +135,17 @@ export async function sendPushReminder(
  * Returns whether to show the in-app banner fallback.
  */
 export async function checkAndShowReminder(
+  leaderId: string,
   leaderName: string,
   entries:    ReviewEntry[],
 ): Promise<{ showBanner: boolean; items: ReminderItem[] }> {
-  const items = getOverdueItems(entries, leaderName);
-  if (items.length === 0 || !reminderIsDue(leaderName)) {
+  const items = getOverdueItems(entries, leaderId);
+  if (items.length === 0 || !reminderIsDue(leaderId)) {
     return { showBanner: false, items: [] };
   }
-
-  // Try push notification first
   if (notificationsGranted()) {
     const sent = await sendPushReminder(leaderName, items);
-    if (sent) return { showBanner: false, items }; // push sent, no need for banner
+    if (sent) return { showBanner: false, items };
   }
-
-  // Fallback: in-app banner
   return { showBanner: true, items };
 }

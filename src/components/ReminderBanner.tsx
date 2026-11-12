@@ -21,11 +21,11 @@ function daysLabel(n: number): string {
 }
 
 /** Returns entries that the given leader reviewed and that are ≥ 7 days old. */
-export function getReminders(entries: ReviewEntry[], leaderName: string): ReminderItem[] {
+export function getReminders(entries: ReviewEntry[], leaderId: string): ReminderItem[] {
   const now    = Date.now();
   const cutoff = 7 * 24 * 60 * 60 * 1000;
   return entries
-    .filter((e) => e.leaderName === leaderName && now - new Date(e.createdAt).getTime() >= cutoff)
+    .filter((e) => (e.leaderId ? e.leaderId === leaderId : e.leaderName === leaderId) && now - new Date(e.createdAt).getTime() >= cutoff)
     .map((e) => ({
       entry:   e,
       daysOld: Math.floor((now - new Date(e.createdAt).getTime()) / (24 * 60 * 60 * 1000)),

@@ -32,7 +32,8 @@ const schema = a.schema({
 
   ReviewEntry: a
     .model({
-      leaderName:          a.string().required(),
+      leaderId:            a.string(),           // LeaderPerson DynamoDB id
+      leaderName:          a.string().required(), // denormalised display name
       leaderRole:          a.enum(['leader', 'core']),
       revieweeName:        a.string().required(),
       revieweeRole:        a.enum(['member', 'core']),

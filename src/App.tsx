@@ -153,21 +153,21 @@ function getScopedEntries(
   leaders: LeaderPerson[],
 ): ReviewEntry[] {
   if (leader.role === 'core') {
-    const myMemberIds   = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.id));
-    const myMemberNames = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.name.toLowerCase()));
+    const myMemberIds   = new Set(members.filter((m) => m.assignedCore === leader.id).map((m) => m.id));
+    const myMemberNames = new Set(members.filter((m) => m.assignedCore === leader.id).map((m) => m.name.toLowerCase()));
     return entries.filter((e) =>
       (e.memberId && myMemberIds.has(e.memberId)) ||
       myMemberNames.has(e.revieweeName.toLowerCase()),
     );
   }
-  // Leader sees entries about their members AND cores assigned to them
-  const myMemberIds   = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.id));
-  const myMemberNames = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.name.toLowerCase()));
-  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.name).map((l) => l.name.toLowerCase()));
+  const myMemberIds   = new Set(members.filter((m) => m.assignedLeader === leader.id).map((m) => m.id));
+  const myMemberNames = new Set(members.filter((m) => m.assignedLeader === leader.id).map((m) => m.name.toLowerCase()));
+  const myCoreIds     = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.id).map((l) => l.id));
+  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.id).map((l) => l.name.toLowerCase()));
   return entries.filter((e) =>
     (e.memberId && myMemberIds.has(e.memberId)) ||
     myMemberNames.has(e.revieweeName.toLowerCase()) ||
-    (e.revieweeRole === 'core' && myCoreNames.has(e.revieweeName.toLowerCase())),
+    (e.revieweeRole === 'core' && (e.leaderId ? myCoreIds.has(e.leaderId) : myCoreNames.has(e.revieweeName.toLowerCase()))),
   );
 }
 
@@ -232,8 +232,8 @@ export default function App() {
       setEntries(e);
       setAuditLog(a);
 
-      const savedName = sessionStorage.getItem('currentLeader');
-      const saved = savedName ? l.find((x) => x.name === savedName) : null;
+      const savedId = sessionStorage.getItem('currentLeader');
+      const saved = savedId ? l.find((x) => x.id === savedId) : null;
       if (saved) {
         setCurrentLeader(saved);
         setAuthState('app');
@@ -274,7 +274,7 @@ export default function App() {
 
   // Reminders: entries this leader reviewed that are ≥7 days old
   const reminderItems = useMemo(
-    () => currentLeader ? getReminders(scopedEntries, currentLeader.name) : [],
+    () => currentLeader ? getReminders(scopedEntries, currentLeader.id) : [],
     [scopedEntries, currentLeader]
   );
 
@@ -310,7 +310,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (leader: LeaderPerson) => {
-    sessionStorage.setItem('currentLeader', leader.name);
+    sessionStorage.setItem('currentLeader', leader.id);
     setCurrentLeader(leader);
     setAuthState('app');
     addLog('login', `${leader.displayName || leader.name} logged in.`, leader.name);
@@ -321,7 +321,7 @@ export default function App() {
     }
 
     // Check reminders — will try push notification first, fall back to banner
-    checkAndShowReminder(leader.name, entries).then(({ showBanner }) => {
+    checkAndShowReminder(leader.id, leader.displayName || leader.name, entries).then(({ showBanner }) => {
       if (showBanner) setShowReminder(true);
     });
   };
@@ -343,7 +343,7 @@ export default function App() {
 
   const handleSnoozeReminder = () => {
     if (!currentLeader) return;
-    const until = snoozeReminder(currentLeader.name);
+    const until = snoozeReminder(currentLeader.id);
     addLog('reminder_snoozed',
       `${currentLeader.displayName || currentLeader.name} snoozed action plan reminders until ${until.toLocaleDateString('en-GB')}.`,
       currentLeader.name);
@@ -427,6 +427,7 @@ export default function App() {
     const now = new Date().toISOString();
     const entry: ReviewEntry = {
       id:             uuidv4(),
+      leaderId:       reviewer?.id,
       leaderName:     values.leaderName,
       leaderRole:     reviewer?.role ?? 'core',
       revieweeName:   values.revieweeName.trim(),
@@ -454,6 +455,7 @@ export default function App() {
     const reviewer = leaders.find((l) => l.name === values.leaderName);
     const updatedEntry: ReviewEntry = {
       ...editingEntry,
+      leaderId:      reviewer?.id ?? editingEntry.leaderId,
       leaderName:    values.leaderName,
       leaderRole:    reviewer?.role ?? editingEntry.leaderRole,
       revieweeName:  values.revieweeName.trim(),

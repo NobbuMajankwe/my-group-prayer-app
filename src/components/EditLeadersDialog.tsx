@@ -72,7 +72,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
     setAdding(true);
     try {
       const hash = await hashPin(draft.password);
-      setLeaders((p) => [...p, { name, role: draft.role, passwordHash: hash, assignedLeader: draft.assignedLeader || undefined }]);
+      setLeaders((p) => [...p, { id: crypto.randomUUID(), name, role: draft.role, passwordHash: hash, assignedLeader: draft.assignedLeader || undefined }]);
       setDraft(EMPTY_DRAFT);
     } finally {
       setAdding(false);
@@ -90,7 +90,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
       if (!trimmedName) continue;
       if (leaders.some((l) => l.name.toLowerCase() === trimmedName.toLowerCase())) continue;
       const hash = pw.length >= 4 ? await hashPin(pw) : '';
-      toAdd.push({ name: trimmedName, role, passwordHash: hash });
+      toAdd.push({ id: crypto.randomUUID(), name: trimmedName, role, passwordHash: hash });
     }
     if (toAdd.length > 0) {
       setLeaders((p) => [...p, ...toAdd].slice(0, MAX_LEADERS));
@@ -102,8 +102,8 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
       ? { ...l, role: newRole, assignedLeader: newRole === 'leader' ? undefined : l.assignedLeader }
       : l));
 
-  const handleAssignLeader = (coreName: string, leaderName: string) =>
-    setLeaders((p) => p.map((l) => l.name === coreName ? { ...l, assignedLeader: leaderName || undefined } : l));
+  const handleAssignLeader = (coreName: string, leaderId: string) =>
+    setLeaders((p) => p.map((l) => l.name === coreName ? { ...l, assignedLeader: leaderId || undefined } : l));
 
   const handleRemove = (name: string) =>
     setLeaders((p) => p.filter((l) => l.name !== name));
@@ -148,7 +148,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                   onChange={(e) => setD({ assignedLeader: e.target.value })}
                 >
                   {leaders.filter((l) => l.role === 'leader').map((l) => (
-                    <MenuItem key={l.name} value={l.name}>
+                    <MenuItem key={l.id} value={l.id}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <StarOutlinedIcon sx={{ fontSize: 13, color: '#eab308' }} />
                         {l.displayName || l.name}
@@ -247,7 +247,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                     >
                       <MenuItem value=""><em style={{ fontSize: '0.72rem' }}>No leader</em></MenuItem>
                       {leaders.filter((l) => l.role === 'leader').map((l) => (
-                        <MenuItem key={l.name} value={l.name} sx={{ fontSize: '0.72rem' }}>
+                        <MenuItem key={l.id} value={l.id} sx={{ fontSize: '0.72rem' }}>
                           {l.displayName || l.name}
                         </MenuItem>
                       ))}

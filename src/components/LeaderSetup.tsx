@@ -57,7 +57,7 @@ export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
     setAdding(true);
     try {
       const hash = await hashPin(draft.password);
-      setLeaders((p) => [...p, { name, role: draft.role, passwordHash: hash }]);
+      setLeaders((p) => [...p, { id: crypto.randomUUID(), name, role: draft.role, passwordHash: hash }]);
       setDraft(EMPTY_DRAFT);
     } finally {
       setAdding(false);

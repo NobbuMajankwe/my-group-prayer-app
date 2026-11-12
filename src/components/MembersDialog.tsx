@@ -153,8 +153,8 @@ export default function MembersDialog({
       toAdd.push({
         id:             crypto.randomUUID(),
         name:           trimmedName,
-        assignedLeader: matchedLeader.name,
-        assignedCore:   matchedCore?.name,
+        assignedLeader: matchedLeader.id,
+        assignedCore:   matchedCore?.id,
       });
     }
 
@@ -248,15 +248,16 @@ export default function MembersDialog({
 
   // ── Group members by leader ────────────────────────────────────────────
 
-  const grouped: { leader: string; items: Member[] }[] = leaderOnly
+  const grouped: { leaderId: string; leaderName: string; items: Member[] }[] = leaderOnly
     .map((l) => ({
-      leader: l.name,
-      items:  list.filter((m) => m.assignedLeader === l.name),
+      leaderId: l.id,
+      leaderName: l.displayName || l.name,
+      items:  list.filter((m) => m.assignedLeader === l.id),
     }))
     .filter((g) => g.items.length > 0);
 
   const unassigned = list.filter(
-    (m) => !leaderOnly.some((l) => l.name === m.assignedLeader)
+    (m) => !leaderOnly.some((l) => l.id === m.assignedLeader)
   );
 
   return (
@@ -374,7 +375,7 @@ export default function MembersDialog({
                   onChange={(e) => setD({ assignedLeader: e.target.value })}
                 >
                   {leaderOnly.map((l) => (
-                    <MenuItem key={l.name} value={l.name}>
+                    <MenuItem key={l.id} value={l.id}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <StarOutlinedIcon sx={{ fontSize: 14, color: '#eab308' }} />
                         {l.displayName || l.name}
@@ -398,7 +399,7 @@ export default function MembersDialog({
                 >
                   <MenuItem value=""><em>None</em></MenuItem>
                   {coreOnly.map((l) => (
-                    <MenuItem key={l.name} value={l.name}>
+                    <MenuItem key={l.id} value={l.id}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <GroupsOutlinedIcon sx={{ fontSize: 14, color: '#14b8a6' }} />
                         {l.displayName || l.name}
@@ -486,8 +487,8 @@ export default function MembersDialog({
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             {/* Grouped by leader */}
-            {grouped.map(({ leader, items }) => (
-              <Box key={leader}>
+            {grouped.map(({ leaderId, leaderName, items }) => (
+              <Box key={leaderId}>
                 {/* Leader heading */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
                   <StarOutlinedIcon sx={{ fontSize: 14, color: '#eab308' }} />
@@ -495,7 +496,7 @@ export default function MembersDialog({
                     fontWeight: 700, color: LEADER_COL,
                     textTransform: 'uppercase', letterSpacing: '0.06em',
                   }}>
-                    {leader}
+                    {leaderName}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                     · {items.length} member{items.length !== 1 ? 's' : ''}
@@ -554,7 +555,7 @@ interface MemberRowProps {
 }
 
 function MemberRow({ member, leaders, isEditing, onEdit, onDelete }: MemberRowProps) {
-  const corePerson = leaders.find((l) => l.name === member.assignedCore);
+  const corePerson = leaders.find((l) => l.id === member.assignedCore);
 
   return (
     <Box sx={{

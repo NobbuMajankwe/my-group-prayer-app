@@ -44,15 +44,14 @@ export default function ReviewStatusDashboard({
   // Members/cores in scope for this leader
   const myMembers = useMemo(() => {
     if (currentLeader.role === 'leader') {
-      return members.filter((m) => m.assignedLeader === currentLeader.name);
+      return members.filter((m) => m.assignedLeader === currentLeader.id);
     }
-    return members.filter((m) => m.assignedCore === currentLeader.name);
+    return members.filter((m) => m.assignedCore === currentLeader.id);
   }, [members, currentLeader]);
 
-  // For leaders: cores directly assigned to them
   const myCores = useMemo(() => {
     if (currentLeader.role !== 'leader') return [];
-    return leaders.filter((l) => l.role === 'core' && l.assignedLeader === currentLeader.name);
+    return leaders.filter((l) => l.role === 'core' && l.assignedLeader === currentLeader.id);
   }, [currentLeader, leaders]);
 
   // entries are already scoped — use them directly

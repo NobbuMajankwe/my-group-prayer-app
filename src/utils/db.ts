@@ -80,9 +80,11 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
   const { data: existing } = await c.models.Leader.list({});
 
   for (const l of leaders) {
-    const found = existing?.find((r: any) => r.name === l.name);
+    // Match by id if present, fall back to name for legacy records
+    const found = existing?.find((r: any) => r.id === l.id || r.name === l.name);
     if (found) {
       const changed =
+        found.name             !== l.name             ||
         found.role             !== l.role             ||
         found.passwordHash     !== l.passwordHash     ||
         (found.displayName     ?? undefined) !== l.displayName     ||
@@ -90,6 +92,7 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
       if (changed) {
         await c.models.Leader.update({
           id:             found.id,
+          name:           l.name,
           role:           l.role,
           passwordHash:   l.passwordHash,
           displayName:    l.displayName   ?? null,
@@ -109,19 +112,19 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
   }
 
   for (const r of existing ?? []) {
-    if (!leaders.some((l) => l.name === r.name)) {
+    if (!leaders.some((l) => l.id === r.id || l.name === r.name)) {
       await c.models.Leader.delete({ id: r.id });
     }
   }
 }
 
 export async function dbUpdateLeaderReminder(
-  name: string,
+  id: string,
   lastReminderSent: string,
 ): Promise<void> {
   const c = getClient();
   const { data } = await c.models.Leader.list({});
-  const found = data?.find((r: any) => r.name === name);
+  const found = data?.find((r: any) => r.id === id);
   if (found) {
     await c.models.Leader.update({ id: found.id, lastReminderSent });
   }
@@ -188,6 +191,7 @@ export async function dbSaveEntry(entry: ReviewEntry): Promise<void> {
   const found = data?.find((r: any) => r.id === entry.id);
 
   const payload = {
+    leaderId:          entry.leaderId ?? null,
     leaderName:        entry.leaderName,
     leaderRole:        entry.leaderRole,
     revieweeName:      entry.revieweeName,
@@ -260,6 +264,7 @@ export async function dbLoadAuditLog(): Promise<AuditEntry[]> {
 
 function mapLeader(r: any): LeaderPerson {
   return {
+    id:              r.id,
     name:            r.name,
     role:            r.role ?? 'core',
     passwordHash:    r.passwordHash ?? '',
@@ -281,12 +286,13 @@ function mapMember(r: any): Member {
 function mapEntry(r: any): ReviewEntry {
   return {
     id:               r.id,
+    leaderId:         r.leaderId ?? undefined,
     leaderName:       r.leaderName,
     leaderRole:       r.leaderRole ?? 'core',
     revieweeName:     r.revieweeName,
     revieweeRole:     r.revieweeRole ?? 'member',
     memberId:         r.memberId ?? undefined,
-    prayerRequest:    r.prayerRequest ?? r.review ?? '',   // backwards compat
+    prayerRequest:    r.prayerRequest ?? r.review ?? '',
     plannedAction:    r.plannedAction ?? '',
     createdAt:        r.createdAt,
     chatInitiated:    r.chatInitiated ?? false,

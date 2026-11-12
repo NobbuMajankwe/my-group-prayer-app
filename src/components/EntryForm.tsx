@@ -59,20 +59,19 @@ export default function EntryForm({
   // eslint-disable-next-line react-hooks/incompatible-library
   const chatInitiated     = watch('chatInitiated');
   const revieweeRole      = watch('revieweeRole');
-  const selectedLeaderName = currentLeader.name;
   const isLeader           = currentLeader.role === 'leader';
 
   const nameOptions = useMemo((): NameOption[] => {
     if (isLeader && revieweeRole === 'core') {
       return leaders
         .filter((l) => l.role === 'core')
-        .map((l) => ({ label: l.displayName || l.name, memberId: l.name, core: undefined }));
+        .map((l) => ({ label: l.displayName || l.name, memberId: l.id, core: undefined }));
     }
     const assignedMembers = isLeader
-      ? members.filter((m) => m.assignedLeader === selectedLeaderName)
-      : members.filter((m) => m.assignedCore === selectedLeaderName);
+      ? members.filter((m) => m.assignedLeader === currentLeader.id)
+      : members.filter((m) => m.assignedCore === currentLeader.id);
     return assignedMembers.map((m) => ({ label: m.name, memberId: m.id, core: m.assignedCore }));
-  }, [selectedLeaderName, isLeader, revieweeRole, members, leaders]);
+  }, [currentLeader.id, isLeader, revieweeRole, members, leaders]);
 
   useEffect(() => {
     setValue('leaderName', currentLeader.name);
