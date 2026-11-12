@@ -83,15 +83,17 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
     const found = existing?.find((r: any) => r.name === l.name);
     if (found) {
       const changed =
-        found.role         !== l.role         ||
-        found.passwordHash !== l.passwordHash ||
-        (found.displayName ?? undefined) !== l.displayName;
+        found.role             !== l.role             ||
+        found.passwordHash     !== l.passwordHash     ||
+        (found.displayName     ?? undefined) !== l.displayName     ||
+        (found.assignedLeader  ?? undefined) !== l.assignedLeader;
       if (changed) {
         await c.models.Leader.update({
-          id:           found.id,
-          role:         l.role,
-          passwordHash: l.passwordHash,
-          displayName:  l.displayName ?? null,
+          id:             found.id,
+          role:           l.role,
+          passwordHash:   l.passwordHash,
+          displayName:    l.displayName   ?? null,
+          assignedLeader: l.assignedLeader ?? null,
         });
       }
     } else {
@@ -99,7 +101,8 @@ export async function dbSaveLeaders(leaders: LeaderPerson[]): Promise<void> {
         name:            l.name,
         role:            l.role,
         passwordHash:    l.passwordHash,
-        displayName:     l.displayName ?? null,
+        displayName:     l.displayName   ?? null,
+        assignedLeader:  l.assignedLeader ?? null,
         reminderEnabled: true,
       });
     }
@@ -257,10 +260,11 @@ export async function dbLoadAuditLog(): Promise<AuditEntry[]> {
 
 function mapLeader(r: any): LeaderPerson {
   return {
-    name:         r.name,
-    role:         r.role ?? 'core',
-    passwordHash: r.passwordHash ?? '',
-    displayName:  r.displayName ?? undefined,
+    name:            r.name,
+    role:            r.role ?? 'core',
+    passwordHash:    r.passwordHash ?? '',
+    displayName:     r.displayName     ?? undefined,
+    assignedLeader:  r.assignedLeader  ?? undefined,
   };
 }
 

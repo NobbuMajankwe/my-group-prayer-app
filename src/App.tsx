@@ -153,7 +153,6 @@ function getScopedEntries(
   leaders: LeaderPerson[],
 ): ReviewEntry[] {
   if (leader.role === 'core') {
-    // Core sees only entries about their assigned members
     const myMemberIds   = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.id));
     const myMemberNames = new Set(members.filter((m) => m.assignedCore === leader.name).map((m) => m.name.toLowerCase()));
     return entries.filter((e) =>
@@ -161,10 +160,10 @@ function getScopedEntries(
       myMemberNames.has(e.revieweeName.toLowerCase()),
     );
   }
-  // Leader sees entries about their members AND their cores
+  // Leader sees entries about their members AND cores assigned to them
   const myMemberIds   = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.id));
   const myMemberNames = new Set(members.filter((m) => m.assignedLeader === leader.name).map((m) => m.name.toLowerCase()));
-  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && members.some((m) => m.assignedLeader === leader.name && m.assignedCore === l.name)).map((l) => l.name.toLowerCase()));
+  const myCoreNames   = new Set(leaders.filter((l) => l.role === 'core' && l.assignedLeader === leader.name).map((l) => l.name.toLowerCase()));
   return entries.filter((e) =>
     (e.memberId && myMemberIds.has(e.memberId)) ||
     myMemberNames.has(e.revieweeName.toLowerCase()) ||

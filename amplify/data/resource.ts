@@ -14,6 +14,7 @@ const schema = a.schema({
       role:         a.enum(['leader', 'core']),
       passwordHash: a.string().required(),
       displayName:  a.string(),
+      assignedLeader: a.string(), // for cores: the leader they report to
       // reminder preferences
       reminderEnabled:  a.boolean().default(true),
       lastReminderSent: a.string(), // ISO date

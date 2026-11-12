@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react';
 import {
   Alert, Box, Button, Chip, Dialog, DialogActions,
-  DialogContent, DialogTitle, Divider, IconButton,
-  InputAdornment, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup,
+  DialogContent, DialogTitle, Divider, FormControl, IconButton,
+  InputAdornment, InputLabel, MenuItem, Select, Tab, Tabs,
+  TextField, ToggleButton, ToggleButtonGroup,
   Typography, alpha,
 } from '@mui/material';
 import AddIcon           from '@mui/icons-material/Add';
@@ -23,13 +24,14 @@ const ROLE_COLOURS: Record<LeaderRole, { bg: string; border: string; color: stri
 };
 
 interface Draft {
-  name:     string;
-  role:     LeaderRole;
-  password: string;
-  confirm:  string;
+  name:           string;
+  role:           LeaderRole;
+  password:       string;
+  confirm:        string;
+  assignedLeader: string;
 }
 
-const EMPTY_DRAFT: Draft = { name: '', role: 'core', password: '', confirm: '' };
+const EMPTY_DRAFT: Draft = { name: '', role: 'core', password: '', confirm: '', assignedLeader: '' };
 
 interface Props {
   open:           boolean;
@@ -65,11 +67,12 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
     if (leaders.length >= MAX_LEADERS) { setDraftError(`Max ${MAX_LEADERS} people.`); return; }
     if (draft.password.length < 4)     { setDraftError('Password must be at least 4 characters.'); return; }
     if (draft.password !== draft.confirm) { setDraftError('Passwords do not match.'); return; }
+    if (draft.role === 'core' && !draft.assignedLeader) { setDraftError('Please assign a leader for this core.'); return; }
 
     setAdding(true);
     try {
       const hash = await hashPin(draft.password);
-      setLeaders((p) => [...p, { name, role: draft.role, passwordHash: hash }]);
+      setLeaders((p) => [...p, { name, role: draft.role, passwordHash: hash, assignedLeader: draft.assignedLeader || undefined }]);
       setDraft(EMPTY_DRAFT);
     } finally {
       setAdding(false);
@@ -95,7 +98,12 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
   };
 
   const handleRoleToggle = (name: string, newRole: LeaderRole) =>
-    setLeaders((p) => p.map((l) => l.name === name ? { ...l, role: newRole } : l));
+    setLeaders((p) => p.map((l) => l.name === name
+      ? { ...l, role: newRole, assignedLeader: newRole === 'leader' ? undefined : l.assignedLeader }
+      : l));
+
+  const handleAssignLeader = (coreName: string, leaderName: string) =>
+    setLeaders((p) => p.map((l) => l.name === coreName ? { ...l, assignedLeader: leaderName || undefined } : l));
 
   const handleRemove = (name: string) =>
     setLeaders((p) => p.filter((l) => l.name !== name));
@@ -120,7 +128,7 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
         {inputTab === 0 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2.5 }}>
             <ToggleButtonGroup value={draft.role} exclusive size="small" fullWidth
-              onChange={(_, v) => { if (v) setD({ role: v as LeaderRole }); }}
+              onChange={(_, v) => { if (v) setD({ role: v as LeaderRole, assignedLeader: '' }); }}
               sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 600 } }}>
               <ToggleButton value="leader" sx={{ gap: 0.75 }}>
                 <StarOutlinedIcon sx={{ fontSize: 15 }} /> Leader
@@ -129,6 +137,27 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                 <GroupsOutlinedIcon sx={{ fontSize: 15 }} /> Core / Intern
               </ToggleButton>
             </ToggleButtonGroup>
+
+            {draft.role === 'core' && (
+              <FormControl size="small" fullWidth required>
+                <InputLabel id="new-core-leader-label">Assigned leader</InputLabel>
+                <Select
+                  labelId="new-core-leader-label"
+                  label="Assigned leader"
+                  value={draft.assignedLeader}
+                  onChange={(e) => setD({ assignedLeader: e.target.value })}
+                >
+                  {leaders.filter((l) => l.role === 'leader').map((l) => (
+                    <MenuItem key={l.name} value={l.name}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <StarOutlinedIcon sx={{ fontSize: 13, color: '#eab308' }} />
+                        {l.displayName || l.name}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
 
             <TextField size="small" label="Name" fullWidth value={draft.name}
               onChange={(e) => setD({ name: e.target.value })}
@@ -206,6 +235,24 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
                     <ToggleButton value="leader">Leader</ToggleButton>
                     <ToggleButton value="core">Core</ToggleButton>
                   </ToggleButtonGroup>
+
+                  {person.role === 'core' && (
+                    <Select
+                      size="small"
+                      displayEmpty
+                      value={person.assignedLeader ?? ''}
+                      onChange={(e) => handleAssignLeader(person.name, e.target.value)}
+                      sx={{ fontSize: '0.72rem', minWidth: 110, height: 28,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha('#eab308', 0.4) } }}
+                    >
+                      <MenuItem value=""><em style={{ fontSize: '0.72rem' }}>No leader</em></MenuItem>
+                      {leaders.filter((l) => l.role === 'leader').map((l) => (
+                        <MenuItem key={l.name} value={l.name} sx={{ fontSize: '0.72rem' }}>
+                          {l.displayName || l.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
 
                   <Chip label={person.role === 'leader' ? 'Leader' : 'Core'} size="small"
                     sx={{ bgcolor: c.bg, color: c.color, fontWeight: 700,

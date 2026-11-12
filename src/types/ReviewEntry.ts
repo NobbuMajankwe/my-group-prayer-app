@@ -2,10 +2,11 @@ export type LeaderRole   = 'leader' | 'core';
 export type RevieweeRole = 'member' | 'core';
 
 export interface LeaderPerson {
-  name:          string;
-  role:          LeaderRole;
-  passwordHash:  string;
-  displayName?:  string;
+  name:            string;
+  role:            LeaderRole;
+  passwordHash:    string;
+  displayName?:    string;
+  assignedLeader?: string; // for cores: the leader they report to
 }
 
 export interface Member {
