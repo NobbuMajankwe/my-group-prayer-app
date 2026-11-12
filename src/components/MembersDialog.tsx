@@ -49,12 +49,13 @@ interface MembersDialogProps {
   leaders:        LeaderPerson[];
   onSave:         (members: Member[]) => void;
   onClose:        () => void;
+  saving?:        boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function MembersDialog({
-  open, members, leaders, onSave, onClose,
+  open, members, leaders, onSave, onClose, saving,
 }: MembersDialogProps) {
   const [list,       setList]       = useState<Member[]>(members);
   const [draft,      setDraft]      = useState<MemberDraft>(EMPTY_DRAFT);
@@ -515,8 +516,8 @@ export default function MembersDialog({
           sx={{ borderColor: alpha('#6b7280', 0.3), color: 'text.secondary' }}>
           Cancel
         </Button>
-        <Button variant="contained" color="primary" onClick={() => onSave(list)}>
-          Save members
+        <Button variant="contained" color="primary" onClick={() => onSave(list)} disabled={saving}>
+          {saving ? 'Saving…' : 'Save members'}
         </Button>
       </DialogActions>
     </Dialog>

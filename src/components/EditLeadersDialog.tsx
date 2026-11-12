@@ -36,9 +36,10 @@ interface Props {
   currentLeaders: LeaderPerson[];
   onSave:         (leaders: LeaderPerson[]) => void;
   onClose:        () => void;
+  saving?:        boolean;
 }
 
-export default function EditLeadersDialog({ open, currentLeaders, onSave, onClose }: Props) {
+export default function EditLeadersDialog({ open, currentLeaders, onSave, onClose, saving }: Props) {
   const [leaders,    setLeaders]    = useState<LeaderPerson[]>(currentLeaders);
   const [draft,      setDraft]      = useState<Draft>(EMPTY_DRAFT);
   const [draftError, setDraftError] = useState('');
@@ -232,8 +233,8 @@ export default function EditLeadersDialog({ open, currentLeaders, onSave, onClos
           Cancel
         </Button>
         <Button variant="contained" color="primary"
-          onClick={() => onSave(leaders)} disabled={leaders.length === 0}>
-          Save
+          onClick={() => onSave(leaders)} disabled={saving || leaders.length === 0}>
+          {saving ? 'Saving…' : 'Save'}
         </Button>
       </DialogActions>
     </Dialog>

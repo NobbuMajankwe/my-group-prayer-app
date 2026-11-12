@@ -16,9 +16,10 @@ interface Props {
   open: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  saving?: boolean;
 }
 
-export default function DeleteConfirmationDialog({ entry, open, onConfirm, onCancel }: Props) {
+export default function DeleteConfirmationDialog({ entry, open, onConfirm, onCancel, saving }: Props) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>
@@ -55,8 +56,8 @@ export default function DeleteConfirmationDialog({ entry, open, onConfirm, onCan
           sx={{ borderColor: alpha('#6b7280', 0.3), color: 'text.secondary' }}>
           Cancel
         </Button>
-        <Button variant="contained" color="error" onClick={onConfirm} autoFocus>
-          Delete
+        <Button variant="contained" color="error" onClick={onConfirm} disabled={saving} autoFocus>
+          {saving ? 'Deleting…' : 'Delete'}
         </Button>
       </DialogActions>
     </Dialog>

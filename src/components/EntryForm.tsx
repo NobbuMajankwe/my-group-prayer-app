@@ -40,6 +40,7 @@ interface EntryFormProps {
   onSubmit:      (values: EntryFormValues) => void;
   editingEntry?: ReviewEntry | null;
   onCancelEdit?: () => void;
+  saving?:       boolean;
 }
 
 const EMPTY: EntryFormValues = {
@@ -53,7 +54,7 @@ const MEMBER_COL = '#5b21b6';
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function EntryForm({
-  leaders, members, onSubmit, editingEntry, onCancelEdit,
+  leaders, members, onSubmit, editingEntry, onCancelEdit, saving,
 }: EntryFormProps) {
   const {
     register, handleSubmit, reset, watch, control, setValue,
@@ -337,9 +338,10 @@ export default function EntryForm({
               variant="contained"
               color="primary"
               startIcon={isEditing ? <SaveIcon /> : <AddIcon />}
+              disabled={saving}
               sx={{ minWidth: 140 }}
             >
-              {isEditing ? 'Save changes' : 'Add entry'}
+              {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Add entry'}
             </Button>
             {isEditing && (
               <Button type="button" variant="outlined" color="inherit"

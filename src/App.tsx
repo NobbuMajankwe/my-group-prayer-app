@@ -566,6 +566,7 @@ export default function App() {
               onSubmit={handleFormSubmit}
               editingEntry={editingEntry}
               onCancelEdit={() => setEditingEntry(null)}
+              saving={saving}
             />
           </Box>
 
@@ -598,6 +599,7 @@ export default function App() {
         open={Boolean(deleteTarget)}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+        saving={saving}
       />
 
       <EditLeadersDialog
@@ -605,6 +607,7 @@ export default function App() {
         currentLeaders={leaders}
         onSave={handleEditLeadersSave}
         onClose={() => setEditLeadersOpen(false)}
+        saving={saving}
       />
 
       <MembersDialog
@@ -613,6 +616,7 @@ export default function App() {
         leaders={leaders}
         onSave={handleMembersSave}
         onClose={() => setMembersOpen(false)}
+        saving={saving}
       />
 
       <ReviewStatusDashboard
@@ -629,6 +633,7 @@ export default function App() {
         leader={currentLeader}
         onSave={handleProfileSave}
         onClose={() => setProfileOpen(false)}
+        saving={saving}
       />
 
       <AuditLogDrawer

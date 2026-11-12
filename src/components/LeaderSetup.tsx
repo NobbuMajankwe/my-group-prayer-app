@@ -32,9 +32,10 @@ const EMPTY_DRAFT: Draft = { name: '', role: 'leader', password: '', confirm: ''
 
 interface LeaderSetupProps {
   onComplete: (leaders: LeaderPerson[]) => void;
+  saving?:    boolean;
 }
 
-export default function LeaderSetup({ onComplete }: LeaderSetupProps) {
+export default function LeaderSetup({ onComplete, saving }: LeaderSetupProps) {
   const [leaders,    setLeaders]    = useState<LeaderPerson[]>([]);
   const [draft,      setDraft]      = useState<Draft>(EMPTY_DRAFT);
   const [draftError, setDraftError] = useState('');
@@ -298,9 +299,10 @@ export default function LeaderSetup({ onComplete }: LeaderSetupProps) {
                 fullWidth variant="contained" color="primary"
                 endIcon={<ArrowForwardIcon />}
                 onClick={() => onComplete(leaders)}
+                disabled={saving}
                 sx={{ py: 1.25 }}
               >
-                Get started
+                {saving ? 'Saving…' : 'Get started'}
               </Button>
             </Box>
           </>

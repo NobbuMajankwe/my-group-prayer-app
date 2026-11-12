@@ -22,9 +22,10 @@ interface ProfileDialogProps {
   leader:  LeaderPerson;
   onSave:  (updated: LeaderPerson) => void;
   onClose: () => void;
+  saving?: boolean;
 }
 
-export default function ProfileDialog({ open, leader, onSave, onClose }: ProfileDialogProps) {
+export default function ProfileDialog({ open, leader, onSave, onClose, saving }: ProfileDialogProps) {
   const [tab,         setTab]         = useState(0);
   const [displayName, setDisplayName] = useState(leader.displayName || leader.name);
   const [nameError,   setNameError]   = useState('');
@@ -200,8 +201,8 @@ export default function ProfileDialog({ open, leader, onSave, onClose }: Profile
         </Button>
 
         {tab === 0 && (
-          <Button variant="contained" color="primary" startIcon={<SaveOutlinedIcon />} onClick={handleSaveName}>
-            Save
+          <Button variant="contained" color="primary" startIcon={<SaveOutlinedIcon />} onClick={handleSaveName} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
           </Button>
         )}
 
