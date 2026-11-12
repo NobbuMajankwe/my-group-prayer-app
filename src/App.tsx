@@ -185,6 +185,9 @@ export default function App() {
   // ── Auth state ────────────────────────────────────────────────────────
   const [authState,      setAuthState]      = useState<AuthState>('login');
 
+  const [currentLeader,  setCurrentLeader]  = useState<LeaderPerson | null>(null);
+  const [showReminder,   setShowReminder]   = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   // Load all data from DynamoDB on mount, then determine auth gate
   useEffect(() => {
     Promise.all([
@@ -197,16 +200,22 @@ export default function App() {
       setMembers(m);
       setEntries(e);
       setAuditLog(a);
-      setAuthState(l.length === 0 ? 'leader_setup' : 'login');
+
+      const savedName = sessionStorage.getItem('currentLeader');
+      const saved = savedName ? l.find((x) => x.name === savedName) : null;
+      if (saved) {
+        setCurrentLeader(saved);
+        setAuthState('app');
+      } else {
+        setAuthState(l.length === 0 ? 'leader_setup' : 'login');
+      }
+
       setLoading(false);
     }).catch((err) => {
       console.error('[App] Failed to load from DB', err);
       setLoading(false);
     });
   }, []);
-  const [currentLeader,  setCurrentLeader]  = useState<LeaderPerson | null>(null);
-  const [showReminder,   setShowReminder]   = useState(false);
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
 
   // ── UI state ──────────────────────────────────────────────────────────
   const [editLeadersOpen, setEditLeadersOpen] = useState(false);
@@ -258,6 +267,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (leader: LeaderPerson) => {
+    sessionStorage.setItem('currentLeader', leader.name);
     setCurrentLeader(leader);
     setAuthState('app');
     addLog('login', `${leader.displayName || leader.name} logged in.`, leader.name);
@@ -277,6 +287,7 @@ export default function App() {
     if (currentLeader) {
       addLog('logout', `${currentLeader.displayName || currentLeader.name} locked the app.`, currentLeader.name);
     }
+    sessionStorage.removeItem('currentLeader');
     setCurrentLeader(null);
     setAuthState('login');
     setEditingEntry(null);
