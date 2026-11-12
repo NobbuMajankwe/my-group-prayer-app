@@ -26,7 +26,10 @@ export default function AiMemberNotes({ memberName, recentRequests, onAccept }: 
         memberName,
         recentRequests: recentRequests.join('\n'),
       });
-      if (errors?.length) throw new Error(errors[0].message);
+      if (errors?.length) {
+        const e = errors[0] as any;
+        throw new Error(`${e.message} [${e.errorType ?? 'unknown'}]`);
+      }
       setNote(data?.note ?? '');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Suggestion failed';

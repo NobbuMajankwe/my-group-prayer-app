@@ -23,7 +23,10 @@ export default function AiActionSuggest({ prayerRequest, onAccept }: AiActionSug
     try {
       const client = getAiClient();
       const { data, errors } = await client.generations.PrayerAssistant({ prayerRequest });
-      if (errors?.length) throw new Error(errors[0].message);
+      if (errors?.length) {
+        const e = errors[0] as any;
+        throw new Error(`${e.message} [${e.errorType ?? 'unknown'}]`);
+      }
       setSuggestion(data?.action ?? '');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'AI suggestion failed';

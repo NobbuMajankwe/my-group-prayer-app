@@ -25,7 +25,10 @@ export default function AiSummaryButton({ requests }: AiSummaryButtonProps) {
       const { data, errors } = await client.generations.PrayerSummary({
         requests: requests.join('\n\n'),
       });
-      if (errors?.length) throw new Error(errors[0].message);
+      if (errors?.length) {
+        const e = errors[0] as any;
+        throw new Error(`${e.message} [${e.errorType ?? 'unknown'}]`);
+      }
       setSummary(data?.summary ?? '');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Summary failed';
