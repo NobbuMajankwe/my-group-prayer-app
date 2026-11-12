@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Autocomplete, Avatar, Box, Button, Card, CardContent,
-  Chip, FormControl, InputLabel, MenuItem, Select,
-  TextField, ToggleButton, ToggleButtonGroup, Typography, alpha,
+  Chip, FormControl, IconButton, InputLabel, MenuItem, Select,
+  TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, alpha,
 } from '@mui/material';
 import AddIcon           from '@mui/icons-material/Add';
 import SaveIcon          from '@mui/icons-material/Save';
@@ -12,8 +12,11 @@ import ChatIcon          from '@mui/icons-material/ChatBubbleOutlined';
 import PrayerIcon        from '@mui/icons-material/VolunteerActivism';
 import StarOutlinedIcon  from '@mui/icons-material/StarOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import MicIcon           from '@mui/icons-material/Mic';
+import MicOffIcon        from '@mui/icons-material/MicOff';
 import type { LeaderPerson, Member, ReviewEntry, RevieweeRole } from '../types/ReviewEntry';
 import AiActionSuggest from './AiActionSuggest';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 
 export interface EntryFormValues {
   leaderName:     string;
@@ -102,9 +105,14 @@ export default function EntryForm({
   };
 
   const isEditing = Boolean(editingEntry);
-
-  // Chat-only mode: chat initiated but no prayer request yet
   const isChatOnly = chatInitiated && !watch('prayerRequest').trim();
+
+  const prayerVoice = useVoiceInput({
+    onResult: (t) => setValue('prayerRequest', t, { shouldValidate: true }),
+  });
+  const actionVoice = useVoiceInput({
+    onResult: (t) => setValue('plannedAction', t, { shouldValidate: true }),
+  });
 
 
 
@@ -284,23 +292,85 @@ export default function EntryForm({
 
           {/* Prayer request + Planned action — hidden when chat-only save */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-            <TextField
-              label="Prayer request"
-              fullWidth multiline rows={4}
-              required={!chatInitiated}
-              error={Boolean(errors.prayerRequest)}
-              helperText={errors.prayerRequest?.message ?? (chatInitiated ? 'Optional — add once they share it' : 'What did they share?')}
-              {...register('prayerRequest', { required: chatInitiated ? false : 'Prayer request is required.' })}
-            />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ position: 'relative' }}>
               <TextField
-                label="Planned action / follow-up"
+                label="Prayer request"
                 fullWidth multiline rows={4}
                 required={!chatInitiated}
-                error={Boolean(errors.plannedAction)}
-                helperText={errors.plannedAction?.message ?? (chatInitiated ? 'Optional — add once you know the follow-up' : "What's the follow-up?")}
-                {...register('plannedAction', { required: chatInitiated ? false : 'Planned action is required.' })}
+                error={Boolean(errors.prayerRequest)}
+                helperText={errors.prayerRequest?.message ?? (chatInitiated ? 'Optional — add once they share it' : 'What did they share?')}
+                {...register('prayerRequest', { required: chatInitiated ? false : 'Prayer request is required.' })}
+                slotProps={{ input: { sx: { pr: 5 } } }}
               />
+              {prayerVoice.state !== 'unsupported' && (
+                <Tooltip title={prayerVoice.state === 'listening' ? 'Stop recording' : 'Dictate prayer request'}>
+                  <IconButton
+                    size="small"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() =>
+                      prayerVoice.state === 'listening'
+                        ? prayerVoice.stop()
+                        : prayerVoice.start(watch('prayerRequest'))
+                    }
+                    sx={{
+                      position: 'absolute', top: 10, right: 8,
+                      color: prayerVoice.state === 'listening' ? 'error.main' : 'text.disabled',
+                      bgcolor: prayerVoice.state === 'listening' ? alpha('#dc2626', 0.08) : 'transparent',
+                      animation: prayerVoice.state === 'listening' ? 'pulse 1.2s ease-in-out infinite' : 'none',
+                      '@keyframes pulse': {
+                        '0%, 100%': { opacity: 1 },
+                        '50%': { opacity: 0.4 },
+                      },
+                      '&:hover': { color: 'primary.main', bgcolor: alpha('#7c3aed', 0.07) },
+                    }}
+                  >
+                    {prayerVoice.state === 'listening'
+                      ? <MicOffIcon sx={{ fontSize: 17 }} />
+                      : <MicIcon sx={{ fontSize: 17 }} />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ position: 'relative' }}>
+                <TextField
+                  label="Planned action / follow-up"
+                  fullWidth multiline rows={4}
+                  required={!chatInitiated}
+                  error={Boolean(errors.plannedAction)}
+                  helperText={errors.plannedAction?.message ?? (chatInitiated ? 'Optional — add once you know the follow-up' : "What's the follow-up?")}
+                  {...register('plannedAction', { required: chatInitiated ? false : 'Planned action is required.' })}
+                  slotProps={{ input: { sx: { pr: 5 } } }}
+                />
+                {actionVoice.state !== 'unsupported' && (
+                  <Tooltip title={actionVoice.state === 'listening' ? 'Stop recording' : 'Dictate planned action'}>
+                    <IconButton
+                      size="small"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() =>
+                        actionVoice.state === 'listening'
+                          ? actionVoice.stop()
+                          : actionVoice.start(watch('plannedAction'))
+                      }
+                      sx={{
+                        position: 'absolute', top: 10, right: 8,
+                        color: actionVoice.state === 'listening' ? 'error.main' : 'text.disabled',
+                        bgcolor: actionVoice.state === 'listening' ? alpha('#dc2626', 0.08) : 'transparent',
+                        animation: actionVoice.state === 'listening' ? 'pulse 1.2s ease-in-out infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%, 100%': { opacity: 1 },
+                          '50%': { opacity: 0.4 },
+                        },
+                        '&:hover': { color: 'primary.main', bgcolor: alpha('#7c3aed', 0.07) },
+                      }}
+                    >
+                      {actionVoice.state === 'listening'
+                        ? <MicOffIcon sx={{ fontSize: 17 }} />
+                        : <MicIcon sx={{ fontSize: 17 }} />}
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
               <AiActionSuggest
                 prayerRequest={watch('prayerRequest')}
                 onAccept={(s) => setValue('plannedAction', s, { shouldValidate: true })}
